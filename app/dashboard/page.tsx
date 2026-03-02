@@ -18,8 +18,8 @@ import {
     Cell
 } from "recharts";
 
-// Imprt Type from API
-import type { AnalysisResult } from "@/app/api/analyze/route";
+// Import Type from API
+import type { AnalysisResult } from "@/lib/types";
 
 export default function Dashboard() {
     const [isUploading, setIsUploading] = useState(false);
@@ -110,7 +110,7 @@ export default function Dashboard() {
                     />
                     <Button size="sm" onClick={handleUploadClick} disabled={isUploading}>
                         {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                        {isUploading ? "解析中..." : "スクショをアップロード"}
+                        {isUploading ? "解析中..." : "成績表(画像)を選択"}
                     </Button>
                 </div>
             </header>

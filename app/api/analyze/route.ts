@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ImageAnnotatorClient } from '@google-cloud/vision';
-
 // Initialize Google Cloud Vision Client
 const client = new ImageAnnotatorClient({
     credentials: {
         client_email: process.env.GOOGLE_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        private_key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n').replace(/"/g, ''),
         project_id: process.env.GOOGLE_PROJECT_ID,
     },
 });
@@ -20,29 +19,9 @@ interface ParsedLine {
     avgY: number;
 }
 
-// Define the structure for our Grade Data
-export interface Grade {
-    subject: string;
-    teacher: string; // Added teacher field
-    semester: string;
-    credits: number;
-    grade: 'S' | 'A' | 'B' | 'C' | 'F' | 'P'; // P = Pass (合)
-    year: number;
-}
-
-export interface AnalysisResult {
-    grades: Grade[];
-    gpa: {
-        cumulative: number;
-        semesters: { [key: string]: number };
-    };
-    earnedCredits: number;
-    graduationRequirement: {
-        total: number;
-        current: number;
-        percentage: number;
-    };
-}
+// Define the structure for our Grade Data - Imported from lib/types
+import { Grade, AnalysisResult } from '@/lib/types';
+import { calculateGPA } from '@/lib/gpa';
 
 function normalizeGrade(rawGrade: string, textAround: string): Grade['grade'] | null {
     let g = rawGrade.toUpperCase();
@@ -59,56 +38,7 @@ function normalizeGrade(rawGrade: string, textAround: string): Grade['grade'] | 
     return null;
 }
 
-function calculateGPA(grades: Grade[]) {
-    let totalPoints = 0;
-    let totalCredits = 0;
-    const semesterPoints: { [key: string]: number } = {};
-    const semesterCredits: { [key: string]: number } = {};
 
-    grades.forEach((g) => {
-        let points = 0;
-        let isGPACalculable = true;
-
-        switch (g.grade) {
-            case 'S': points = 4; break;
-            case 'A': points = 3; break;
-            case 'B': points = 2; break;
-            case 'C': points = 1; break;
-            case 'F': points = 0; break;
-            case 'P': isGPACalculable = false; break; // Pass: Not in GPA Denom/Num
-            default: isGPACalculable = false;
-        }
-
-        const credits = g.credits || 0;
-
-        if (isGPACalculable) {
-            totalPoints += points * credits;
-            totalCredits += credits;
-        }
-
-        const semKey = `${g.year} ${g.semester}`;
-        if (!semesterPoints[semKey]) {
-            semesterPoints[semKey] = 0;
-            semesterCredits[semKey] = 0;
-        }
-
-        if (isGPACalculable) {
-            semesterPoints[semKey] += points * credits;
-            semesterCredits[semKey] += credits;
-        }
-    });
-
-    const cumulative = totalCredits > 0 ? parseFloat((totalPoints / totalCredits).toFixed(2)) : 0;
-
-    const semesters: { [key: string]: number } = {};
-    for (const key in semesterPoints) {
-        semesters[key] = semesterCredits[key] > 0 ? parseFloat((semesterPoints[key] / semesterCredits[key]).toFixed(2)) : 0;
-    }
-
-    const earnedCredits = grades.filter(g => g.grade !== 'F').reduce((sum, g) => sum + g.credits, 0);
-
-    return { cumulative, semesters, earnedCredits };
-}
 
 
 function reconstructLinesFromAnnotations(annotations: any[]): ParsedLine[] {
@@ -300,28 +230,21 @@ export async function POST(req: NextRequest) {
 
         const buffer = Buffer.from(await file.arrayBuffer());
 
-        // Call Google Cloud Vision API
+        let parsedGrades: Grade[] = [];
+
+        // --- IMAGE OCR PARSING ROUTE ---
         const [result] = await client.textDetection(buffer);
         const detections = result.textAnnotations;
 
         if (!detections || detections.length === 0) {
-            return NextResponse.json({ error: 'No text detected' }, { status: 400 });
+            return NextResponse.json({ error: 'No text detected in image' }, { status: 400 });
         }
 
-        // Pass full annotations to parser for Bounding Box logic
-        let parsedGrades = parseOCRText(detections);
-        console.log("Parsed Grades Count:", parsedGrades.length);
-
-        // If parser found nothing (very likely with complex tables),
-        // let's return a specific error or fallback for now to indicate "OCR worked but parser failed".
-        // OR, for the sake of the demo maintaining functionality if the user uploads a random image,
-        // we could fallback to mock data IF result is empty, but the prompt asked to "use real credentials".
-        // We will return what we found. If empty, the dashboard will show empty.
+        parsedGrades = parseOCRText(detections);
+        console.log("Parsed Grades Count (OCR):", parsedGrades.length);
 
         if (parsedGrades.length === 0) {
             console.log("Parsing failed to find any grades. Check regex against detected text.");
-            // fallback for testing if real OCR returns structure we didn't expect
-            // parsedGrades = MOCK_GRADES; // UNCOMMENT TO FALLBACK TO MOCK
         }
 
         const { cumulative, semesters, earnedCredits } = calculateGPA(parsedGrades);
