@@ -6,13 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "import-subjects": "tsx scripts/import-subjects.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
     "@google-cloud/vision": "^5.3.4",
     "@radix-ui/react-progress": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-tabs": "^1.1.13",
     "@supabase/supabase-js": "^2.98.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -35,6 +37,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

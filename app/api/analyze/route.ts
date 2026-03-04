@@ -22,6 +22,7 @@ interface ParsedLine {
 // Define the structure for our Grade Data - Imported from lib/types
 import { Grade, AnalysisResult } from '@/lib/types';
 import { calculateGPA } from '@/lib/gpa';
+import { validateAndEnrichGrades } from '@/lib/subjects';
 
 // Map of course code prefix (first 2 chars) → credits
 // 専門科目は2単位または4単位だが、シラバスDBなしでは判別不可のため2単位デフォルト
@@ -275,6 +276,9 @@ export async function POST(req: NextRequest) {
             console.log("Parsing failed to find any grades. Check regex against detected text.");
         }
 
+        // subjects テーブルと照合・補完（科目名・単位数の正規化）
+        parsedGrades = await validateAndEnrichGrades(parsedGrades);
+
         const { cumulative, semesters, earnedCredits } = calculateGPA(parsedGrades);
 
         const response: AnalysisResult = {
@@ -285,9 +289,9 @@ export async function POST(req: NextRequest) {
             },
             earnedCredits: earnedCredits,
             graduationRequirement: {
-                total: 124,
+                total: 130,
                 current: earnedCredits,
-                percentage: Math.round((earnedCredits / 124) * 100),
+                percentage: Math.round((earnedCredits / 130) * 100),
             }
         };
 

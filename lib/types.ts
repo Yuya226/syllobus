@@ -6,6 +6,8 @@ export interface Grade {
     grade: 'S' | 'A' | 'B' | 'C' | 'F' | 'P'; // P = Pass (合)
     year: number;
     courseCode?: string;
+    /** subjects テーブルの category カラム（例: "liberal-arts", "language-1st" 等） */
+    category?: string | null;
 }
 
 export interface AnalysisResult {
