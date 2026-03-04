@@ -15,7 +15,9 @@ export default function Home() {
                         <span>HandaiGrade</span>
                     </div>
                     <nav className="flex gap-4">
-                        <Button variant="ghost" size="sm">運営について</Button>
+                        <Button asChild variant="ghost" size="sm">
+                            <Link href="/about">運営について</Link>
+                        </Button>
                     </nav>
                 </div>
             </header>
