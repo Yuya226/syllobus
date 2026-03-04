@@ -16,6 +16,7 @@ import {
 import type { AnalysisResult, AggregateStats, Faculty, Grade } from "@/lib/types";
 import { FACULTY_OPTIONS } from "@/lib/types";
 import { calculateGPA } from "@/lib/gpa";
+import { parseKoanCSV } from "@/lib/csv";
 import GraduationCheck from "@/components/dashboard/GraduationCheck";
 import GradeReview from "@/components/dashboard/GradeReview";
 
@@ -80,7 +81,9 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate }: Props
     });
     const [copied, setCopied] = useState(false);
     const [faculty, setFaculty] = useState<Faculty | ''>('');
+    const [uploadMode, setUploadMode] = useState<'image' | 'csv'>('image');
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const csvFileInputRef = useRef<HTMLInputElement>(null);
 
     function buildAnalysisResult(grades: Grade[]): AnalysisResult {
         const { cumulative, semesters, earnedCredits } = calculateGPA(grades);
@@ -119,12 +122,50 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate }: Props
     const participantCount = stats?.totalParticipants ?? FALLBACK_COUNT;
 
     const handleUploadClick = () => fileInputRef.current?.click();
+    const handleCsvUploadClick = () => csvFileInputRef.current?.click();
+
+    const handleCsvChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        setUploadProgress(0);
+
+        try {
+            const buffer = await file.arrayBuffer();
+            const parsed = parseKoanCSV(buffer);
+            if (parsed.length === 0) {
+                alert('成績データが見つかりませんでした。KOANからエクスポートしたCSVか確認してください。');
+                return;
+            }
+
+            setUploadProgress(50);
+            const response = await fetch('/api/enrich', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ grades: parsed }),
+            });
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || `Enrich failed: ${response.status}`);
+            }
+            const data: AnalysisResult = await response.json();
+            setPendingGrades(data.grades);
+            setUploadProgress(100);
+        } catch (error) {
+            console.error('Error processing CSV:', error);
+            alert(`Error: ${error instanceof Error ? error.message : 'An unknown error occurred'}`);
+        } finally {
+            setIsUploading(false);
+        }
+    };
 
     const handleReset = () => {
         localStorage.removeItem('handai_analysis_data');
         setAnalysisData(null);
         setPendingGrades(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
+        if (csvFileInputRef.current) csvFileInputRef.current.value = '';
     };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -264,6 +305,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate }: Props
 
                 {/* Upload CTA */}
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={handleFileChange} />
+                <input type="file" ref={csvFileInputRef} className="hidden" accept=".csv" onChange={handleCsvChange} />
 
                 {isUploading ? (
                     <div className="space-y-2 pt-1">
@@ -286,10 +328,33 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate }: Props
                             ))}
                         </select>
 
-                        <Button size="lg" className="w-full h-12 text-base font-bold" onClick={handleUploadClick}>
-                            <Upload className="mr-2 h-5 w-5" />
-                            成績をアップロード（複数枚対応）
-                        </Button>
+                        {/* Upload mode tabs */}
+                        <div className="flex rounded-lg border overflow-hidden">
+                            <button
+                                onClick={() => setUploadMode('image')}
+                                className={`flex-1 py-2 text-sm font-medium transition-colors ${uploadMode === 'image' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-secondary'}`}
+                            >
+                                📸 スクリーンショット
+                            </button>
+                            <button
+                                onClick={() => setUploadMode('csv')}
+                                className={`flex-1 py-2 text-sm font-medium transition-colors ${uploadMode === 'csv' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-secondary'}`}
+                            >
+                                📄 KOAN CSV
+                            </button>
+                        </div>
+
+                        {uploadMode === 'image' ? (
+                            <Button size="lg" className="w-full h-12 text-base font-bold" onClick={handleUploadClick}>
+                                <Upload className="mr-2 h-5 w-5" />
+                                成績をアップロード（複数枚対応）
+                            </Button>
+                        ) : (
+                            <Button size="lg" className="w-full h-12 text-base font-bold" onClick={handleCsvUploadClick}>
+                                <Upload className="mr-2 h-5 w-5" />
+                                CSVでアップロード
+                            </Button>
+                        )}
                     </div>
                 )}
 

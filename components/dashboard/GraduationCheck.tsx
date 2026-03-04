@@ -79,9 +79,7 @@ function CategoryRow({
                     <StatusIcon cp={cp} />
                     <span className="text-sm flex-1">{cp.category.label}</span>
                     <span className={`text-xs font-medium tabular-nums ${creditColor}`}>
-                        {cp.earned}
-                        {!cp.category.manualCheck && `/${cp.category.minCredits}`}
-                        単位
+                        {cp.earned}/{cp.category.minCredits}単位
                     </span>
                     <ChevronDown
                         className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180' : ''}`}
