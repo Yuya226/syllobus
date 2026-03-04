@@ -395,14 +395,14 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate }: Props
     const handleShare = () => {
         const devText = deviation != null ? `偏差値 ${deviation}` : `GPA ${analysisData.gpa.cumulative}`;
         const percentileText = stats?.userPercentile ? `上位${stats.userPercentile}%` : '';
-        const text = `阪大内GPA${devText}！\nGPA ${analysisData.gpa.cumulative}${percentileText ? ` / ${percentileText}` : ''}\n\n#阪大成績偏差値 #HandaiGrade\nhttps://handaigrade.vercel.app`;
+        const text = `阪大内GPA${devText}！\nGPA ${analysisData.gpa.cumulative}${percentileText ? ` / ${percentileText}` : ''}\n\n#阪大成績偏差値 #シロバス\nhttps://handaigrade.vercel.app`;
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
     };
 
     const handleCopy = async () => {
         const devText = deviation != null ? `偏差値 ${deviation}` : `GPA ${analysisData.gpa.cumulative}`;
         const percentileText = stats?.userPercentile ? `上位${stats.userPercentile}%` : '';
-        await navigator.clipboard.writeText(`阪大内GPA${devText}！\nGPA ${analysisData.gpa.cumulative}${percentileText ? ` / ${percentileText}` : ''}\n#阪大成績偏差値 #HandaiGrade`);
+        await navigator.clipboard.writeText(`阪大内GPA${devText}！\nGPA ${analysisData.gpa.cumulative}${percentileText ? ` / ${percentileText}` : ''}\n#阪大成績偏差値 #シロバス`);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };

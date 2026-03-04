@@ -5,8 +5,8 @@ import "./globals.css";
 const outfit = Outfit({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-    title: "Handai Grade Analysis",
-    description: "Upload your grade report screenshot for instant analysis.",
+    title: "シロバス | 阪大生の成績集合知",
+    description: "成績スクショをアップするだけ。学部別GPA・科目の成績分布がわかる阪大生向けサービス。",
 };
 
 export default function RootLayout({
