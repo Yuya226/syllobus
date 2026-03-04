@@ -80,7 +80,7 @@ export default function CoursesPage() {
                         ← ダッシュボードに戻る
                     </Button>
                 </Link>
-                <h1 className="text-xl font-bold text-primary">Syllobus</h1>
+                <Link href="/" className="text-xl font-bold text-primary hover:opacity-80 transition-opacity">Syllobus</Link>
             </header>
 
             <main className="flex-1 p-6 md:p-8 max-w-5xl mx-auto w-full">
