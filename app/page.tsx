@@ -10,10 +10,10 @@ export default function Home() {
         <div className="flex min-h-screen flex-col bg-gradient-to-b from-background to-secondary/20">
             <header className="sticky top-0 z-50 w-full border-b bg-background/60 backdrop-blur-md h-14">
                 <div className="container flex h-full items-center justify-between px-4 md:px-6">
-                    <div className="flex items-center gap-2 font-bold text-xl text-primary">
+                    <Link href="/" className="flex items-center gap-2 font-bold text-xl text-primary hover:opacity-80 transition-opacity">
                         <TrendingUp className="h-6 w-6" />
                         <span>Syllobus</span>
-                    </div>
+                    </Link>
                     <nav className="flex gap-4">
                         <Button asChild variant="ghost" size="sm">
                             <Link href="/about">運営について</Link>
