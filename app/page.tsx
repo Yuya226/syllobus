@@ -37,7 +37,7 @@ export default function Home() {
                             </h1>
                             <p className="mx-auto max-w-[620px] text-gray-500 md:text-lg dark:text-gray-400 leading-relaxed">
                                 KOANの成績スクショをアップするだけ。<br className="hidden sm:inline" />
-                                <span className="font-semibold text-foreground">学科別GPA実態・エグ単速報</span>への
+                                <span className="font-semibold text-foreground">学科別GPA実態・科目の成績分布</span>への
                                 アクセス権をその場で取得。
                             </p>
                         </motion.div>
@@ -45,11 +45,16 @@ export default function Home() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.2 }}
-                            className="space-x-4"
+                            className="flex flex-col sm:flex-row items-center gap-3"
                         >
                             <Button asChild size="lg" className="h-11 px-8 text-base rounded-full">
                                 <Link href="/dashboard">
                                     成績をアップロード <ArrowRight className="ml-2 h-4 w-4" />
+                                </Link>
+                            </Button>
+                            <Button asChild size="lg" variant="outline" className="h-11 px-8 text-base rounded-full">
+                                <Link href="/dashboard">
+                                    楽単・エグ単を探す
                                 </Link>
                             </Button>
                         </motion.div>
@@ -71,9 +76,9 @@ export default function Home() {
                             <div className="p-2 bg-orange-100 rounded-full text-orange-500">
                                 <TrendingUp className="h-6 w-6" />
                             </div>
-                            <h3 className="text-sm font-bold">エグ単速報</h3>
+                            <h3 className="text-sm font-bold">成績分布で科目選び</h3>
                             <p className="text-xs text-muted-foreground">
-                                不可率が高い「地雷科目」をリアルタイム集計。履修選択の前に必ずチェック。
+                                S/A/B/C/Fの分布をリアルタイム集計。楽単探しも単位死守も、データで判断。
                             </p>
                         </div>
                         <div className="flex flex-col items-center space-y-2 text-center p-5 rounded-2xl bg-card shadow-sm border border-dashed opacity-70">

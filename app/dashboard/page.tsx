@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Flame, BarChart2 } from "lucide-react";
+import { Search, BarChart2 } from "lucide-react";
 import CourseSearch from "@/components/dashboard/CourseSearch";
 import GradeAnalysis from "@/components/dashboard/GradeAnalysis";
 import type { AggregateStats } from "@/lib/types";
@@ -42,8 +42,8 @@ export default function Dashboard() {
                 <Tabs defaultValue="search">
                     <TabsList className="w-full mb-1">
                         <TabsTrigger value="search" className="flex-1 gap-1.5">
-                            <Flame className="h-3.5 w-3.5 text-orange-500" />
-                            科目・エグ単検索
+                            <Search className="h-3.5 w-3.5" />
+                            科目を探す
                         </TabsTrigger>
                         <TabsTrigger value="analysis" className="flex-1 gap-1.5">
                             <BarChart2 className="h-3.5 w-3.5" />
@@ -52,10 +52,7 @@ export default function Dashboard() {
                     </TabsList>
 
                     <TabsContent value="search">
-                        <CourseSearch
-                            hardCourses={stats?.hardCourses ?? []}
-                            statsLoading={statsLoading}
-                        />
+                        <CourseSearch />
                     </TabsContent>
 
                     <TabsContent value="analysis">

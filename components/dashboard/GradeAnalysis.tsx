@@ -80,7 +80,10 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate }: Props
         return raw ? JSON.parse(raw) as AnalysisResult : null;
     });
     const [copied, setCopied] = useState(false);
-    const [faculty, setFaculty] = useState<Faculty | ''>('');
+    const [faculty, setFaculty] = useState<Faculty | ''>(() => {
+        if (typeof window === "undefined") return '';
+        return (localStorage.getItem('handai_faculty') as Faculty | null) ?? '';
+    });
     const [uploadMode, setUploadMode] = useState<'image' | 'csv'>('image');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const csvFileInputRef = useRef<HTMLInputElement>(null);
@@ -104,8 +107,9 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate }: Props
         setAnalysisData(result);
         setPendingGrades(null);
         localStorage.setItem('handai_analysis_data', JSON.stringify(result));
+        if (faculty) localStorage.setItem('handai_faculty', faculty);
 
-        if (sessionId && faculty) {
+        if (sessionId) {
             fetch("/api/save-grades", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -166,6 +170,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate }: Props
         setPendingGrades(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
         if (csvFileInputRef.current) csvFileInputRef.current.value = '';
+        localStorage.removeItem('handai_faculty');
     };
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -528,7 +533,17 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate }: Props
             </Card>
 
             {/* 卒業要件チェック */}
-            <GraduationCheck grades={analysisData.grades} />
+            {faculty === '経済学部' ? (
+                <GraduationCheck grades={analysisData.grades} />
+            ) : (
+                <div className="rounded-xl border bg-card px-4 py-5 text-center space-y-1">
+                    <p className="text-sm font-semibold text-muted-foreground">卒業要件チェック</p>
+                    <p className="text-xs text-muted-foreground">
+                        {faculty ? `${faculty}は未対応です。` : '学部未選択のため表示できません。'}
+                        現在、経済学部のみ対応しています。
+                    </p>
+                </div>
+            )}
         </div>
     );
 }

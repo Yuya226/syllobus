@@ -62,9 +62,14 @@ export async function GET(req: NextRequest) {
     }
 
     // Hard courses: compute F rate per subject
+    // session_id+subject_name で重複除去（同一人物の再アップロード対策）
+    const seenCourseKeys = new Set<string>();
     const courseStats: Record<string, { total: number; fails: number }> = {};
     for (const row of data) {
         if (!row.subject_name || !row.grade) continue;
+        const key = `${row.session_id}:${row.subject_name}`;
+        if (seenCourseKeys.has(key)) continue;
+        seenCourseKeys.add(key);
         if (!courseStats[row.subject_name]) courseStats[row.subject_name] = { total: 0, fails: 0 };
         courseStats[row.subject_name].total++;
         if (row.grade === 'F') courseStats[row.subject_name].fails++;

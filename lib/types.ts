@@ -53,7 +53,7 @@ export const FACULTY_OPTIONS: Faculty[] = [
 
 export interface SubmissionPayload {
     session_id: string;
-    faculty: Faculty;
+    faculty: Faculty | '';
     grades: Grade[];
     session_gpa: number;
 }
