@@ -83,14 +83,24 @@ export default function Home() {
                                 S/A/B/C/Fの分布をリアルタイム集計。楽単探しも単位死守も、データで判断。
                             </p>
                         </div>
-                        <div className="flex flex-col items-center space-y-2 text-center p-5 rounded-2xl bg-card shadow-sm border border-dashed opacity-70">
-                            <div className="p-2 bg-secondary rounded-full text-muted-foreground">
+                        <div className="flex flex-col items-center space-y-2 text-center p-5 rounded-2xl bg-card shadow-sm border">
+                            <div className="p-2 bg-primary/10 rounded-full text-primary">
                                 <Bell className="h-6 w-6" />
                             </div>
-                            <h3 className="text-sm font-bold">卒業要件チェック <span className="text-xs font-normal text-muted-foreground ml-1">Coming Soon</span></h3>
+                            <h3 className="text-sm font-bold">卒業要件チェック</h3>
                             <p className="text-xs text-muted-foreground">
-                                学科ごとの卒業要件ロジックをAIが学習中。データが集まり次第、先行公開します。
+                                成績をアップロードすると、修得単位が要件ごとに自動で仕分けされます。
                             </p>
+                            <div className="flex flex-col gap-1 w-full pt-1">
+                                <div className="flex items-center justify-between text-xs px-2 py-1 rounded-md bg-green-50 border border-green-200">
+                                    <span className="font-medium text-green-700">経済学部</span>
+                                    <span className="text-green-600 font-semibold">対応済み ✓</span>
+                                </div>
+                                <div className="flex items-center justify-between text-xs px-2 py-1 rounded-md bg-muted">
+                                    <span className="text-muted-foreground">その他の学部</span>
+                                    <span className="text-muted-foreground">実装中…</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
