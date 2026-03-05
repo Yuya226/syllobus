@@ -150,7 +150,7 @@ export default function CourseSearch() {
                             </div>
                         )}
                         {!defaultLoading && defaultResults.length > 0 && (
-                            <div className="space-y-1">
+                            <div className="grid sm:grid-cols-2 gap-1">
                                 {defaultResults.map(course => (
                                     <div key={course.id} className="rounded-lg px-2 py-2.5 hover:bg-muted/50 transition-colors">
                                         <p className="text-sm font-medium truncate">{course.name}</p>
@@ -219,7 +219,7 @@ export default function CourseSearch() {
                         )}
 
                         {!searching && sorted.length > 0 && (
-                            <div className="space-y-1">
+                            <div className="grid sm:grid-cols-2 gap-1">
                                 {sorted.map(course => (
                                     <div
                                         key={course.id}

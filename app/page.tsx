@@ -9,7 +9,7 @@ export default function Home() {
     return (
         <div className="flex min-h-screen flex-col bg-gradient-to-b from-background to-secondary/20">
             <header className="sticky top-0 z-50 w-full border-b bg-background/60 backdrop-blur-md h-14">
-                <div className="w-full max-w-5xl mx-auto flex h-full items-center justify-between px-4 md:px-6">
+                <div className="w-full mx-auto px-4 md:px-12 lg:px-20 flex h-full items-center justify-between">
                     <Link href="/" className="flex items-center gap-2 font-bold text-xl text-primary hover:opacity-80 transition-opacity">
                         <TrendingUp className="h-6 w-6" />
                         <span>Syllobus</span>
@@ -22,7 +22,7 @@ export default function Home() {
                 </div>
             </header>
             <main className="flex-1 flex flex-col justify-center">
-                <section className="w-full max-w-5xl mx-auto px-4 md:px-6 py-10 md:py-16">
+                <section className="w-full mx-auto px-4 md:px-12 lg:px-20 py-10 md:py-16">
                     <div className="flex flex-col items-center space-y-6 text-center">
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
@@ -55,15 +55,15 @@ export default function Home() {
                                 </Link>
                             </Button>
                             <Button asChild size="lg" variant="outline" className="h-11 px-8 text-base rounded-full">
-                                <Link href="/dashboard">
-                                    楽単・エグ単を探す
+                                <Link href="/search">
+                                    楽単を探す
                                 </Link>
                             </Button>
                         </motion.div>
                     </div>
                 </section>
 
-                <section className="w-full max-w-5xl mx-auto px-4 md:px-6 py-6 lg:py-12">
+                <section className="w-full mx-auto px-4 md:px-12 lg:px-20 py-6 lg:py-12">
                     <div className="grid gap-6 md:grid-cols-3">
                         <div className="flex flex-col items-center space-y-2 text-center p-5 rounded-2xl bg-card shadow-sm border">
                             <div className="p-2 bg-primary/10 rounded-full text-primary">
@@ -106,7 +106,7 @@ export default function Home() {
                 </section>
             </main>
             <footer className="border-t py-4 md:py-0">
-                <div className="w-full max-w-5xl mx-auto flex flex-col items-center justify-between gap-4 md:h-16 md:flex-row px-4 md:px-6">
+                <div className="w-full mx-auto px-4 md:px-12 lg:px-20 flex flex-col items-center justify-between gap-4 md:h-16 md:flex-row">
                     <p className="text-center text-xs leading-loose text-muted-foreground md:text-left">
                         阪大生による非公式サービス
                     </p>

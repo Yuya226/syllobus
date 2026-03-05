@@ -236,74 +236,76 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate }: Props
                     <p className="text-sm text-muted-foreground">出すだけで、みんなの成績の実態が見える。</p>
                 </div>
 
-                {/* GPA偏差値 preview */}
-                <div className="relative rounded-xl border bg-card overflow-hidden">
-                    <div className="px-4 py-3 border-b flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-semibold">GPA偏差値</span>
-                        <Badge variant="secondary" className="ml-auto text-xs">{participantCount}人の母数</Badge>
-                    </div>
-                    <div className="px-4 py-6 flex flex-col items-center gap-1 select-none">
-                        <p className="text-xs text-muted-foreground">あなたの偏差値</p>
-                        <p className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-600 blur-sm">
-                            62.4
-                        </p>
-                        <p className="text-xs text-muted-foreground blur-sm">平均よりやや上。安定した成績をキープ...</p>
-                    </div>
-                    <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] flex items-center justify-center">
-                        <div className="flex items-center gap-1.5 text-muted-foreground text-sm font-medium">
-                            <Lock className="h-4 w-4" />
-                            アップすると解除
+                <div className="grid md:grid-cols-3 gap-4">
+                    {/* GPA偏差値 preview */}
+                    <div className="relative rounded-xl border bg-card overflow-hidden">
+                        <div className="px-4 py-3 border-b flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-primary" />
+                            <span className="text-sm font-semibold">GPA偏差値</span>
+                            <Badge variant="secondary" className="ml-auto text-xs">{participantCount}人の母数</Badge>
+                        </div>
+                        <div className="px-4 py-6 flex flex-col items-center gap-1 select-none">
+                            <p className="text-xs text-muted-foreground">あなたの偏差値</p>
+                            <p className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-600 blur-sm">
+                                62.4
+                            </p>
+                            <p className="text-xs text-muted-foreground blur-sm">平均よりやや上。安定した成績をキープ...</p>
+                        </div>
+                        <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] flex items-center justify-center">
+                            <div className="flex items-center gap-1.5 text-muted-foreground text-sm font-medium">
+                                <Lock className="h-4 w-4" />
+                                アップすると解除
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Faculty GPA preview */}
-                <div className="relative rounded-xl border bg-card overflow-hidden">
-                    <div className="px-4 py-3 border-b flex items-center gap-2">
-                        <Users className="h-4 w-4 text-blue-500" />
-                        <span className="text-sm font-semibold">学科別GPA実態</span>
-                        <Badge variant="secondary" className="ml-auto text-xs">集計中</Badge>
-                    </div>
-                    <div className="px-4 py-3 space-y-2 select-none">
-                        {placeholderFaculties.map(([fac, gpa]) => (
-                            <div key={fac} className="flex items-center gap-3 opacity-40">
-                                <span className="text-xs text-muted-foreground w-20 truncate">{fac}</span>
-                                <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-                                    <div className="h-full bg-blue-400 rounded-full" style={{ width: `${Math.min((gpa / 4) * 100, 100)}%` }} />
+                    {/* Faculty GPA preview */}
+                    <div className="relative rounded-xl border bg-card overflow-hidden">
+                        <div className="px-4 py-3 border-b flex items-center gap-2">
+                            <Users className="h-4 w-4 text-blue-500" />
+                            <span className="text-sm font-semibold">学科別GPA実態</span>
+                            <Badge variant="secondary" className="ml-auto text-xs">集計中</Badge>
+                        </div>
+                        <div className="px-4 py-3 space-y-2 select-none">
+                            {placeholderFaculties.map(([fac, gpa]) => (
+                                <div key={fac} className="flex items-center gap-3 opacity-40">
+                                    <span className="text-xs text-muted-foreground w-20 truncate">{fac}</span>
+                                    <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                        <div className="h-full bg-blue-400 rounded-full" style={{ width: `${Math.min((gpa / 4) * 100, 100)}%` }} />
+                                    </div>
+                                    <span className="text-xs font-bold text-blue-600 w-8 text-right blur-sm">{gpa.toFixed(2)}</span>
                                 </div>
-                                <span className="text-xs font-bold text-blue-600 w-8 text-right blur-sm">{gpa.toFixed(2)}</span>
+                            ))}
+                        </div>
+                        <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] flex items-center justify-center">
+                            <div className="flex items-center gap-1.5 text-muted-foreground text-sm font-medium">
+                                <Lock className="h-4 w-4" />
+                                アップすると解除
                             </div>
-                        ))}
-                    </div>
-                    <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] flex items-center justify-center">
-                        <div className="flex items-center gap-1.5 text-muted-foreground text-sm font-medium">
-                            <Lock className="h-4 w-4" />
-                            アップすると解除
                         </div>
                     </div>
-                </div>
 
-                {/* エグ単 preview */}
-                <div className="relative rounded-xl border bg-card overflow-hidden">
-                    <div className="px-4 py-3 border-b flex items-center gap-2">
-                        <Flame className="h-4 w-4 text-orange-500" />
-                        <span className="text-sm font-semibold">エグ単速報</span>
-                        <Badge variant="outline" className="ml-auto text-xs border-orange-200 text-orange-600">不可率TOP</Badge>
-                    </div>
-                    <div className="px-4 py-3 space-y-1.5 select-none">
-                        {placeholderCourses.map((s, i) => (
-                            <div key={s} className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground w-4">{i + 1}.</span>
-                                <span className="text-xs flex-1 blur-sm">{s}</span>
-                                <Badge variant="destructive" className="text-xs px-1.5 py-0 opacity-30">不可XX%</Badge>
+                    {/* 楽単速報 preview */}
+                    <div className="relative rounded-xl border bg-card overflow-hidden">
+                        <div className="px-4 py-3 border-b flex items-center gap-2">
+                            <Flame className="h-4 w-4 text-orange-500" />
+                            <span className="text-sm font-semibold">楽単速報</span>
+                            <Badge variant="outline" className="ml-auto text-xs border-orange-200 text-orange-600">不可率TOP</Badge>
+                        </div>
+                        <div className="px-4 py-3 space-y-1.5 select-none">
+                            {placeholderCourses.map((s, i) => (
+                                <div key={s} className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground w-4">{i + 1}.</span>
+                                    <span className="text-xs flex-1 blur-sm">{s}</span>
+                                    <Badge variant="destructive" className="text-xs px-1.5 py-0 opacity-30">不可XX%</Badge>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] flex items-center justify-center">
+                            <div className="flex items-center gap-1.5 text-muted-foreground text-sm font-medium">
+                                <Lock className="h-4 w-4" />
+                                アップすると解除
                             </div>
-                        ))}
-                    </div>
-                    <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] flex items-center justify-center">
-                        <div className="flex items-center gap-1.5 text-muted-foreground text-sm font-medium">
-                            <Lock className="h-4 w-4" />
-                            アップすると解除
                         </div>
                     </div>
                 </div>
@@ -457,93 +459,97 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate }: Props
                 </CardContent>
             </Card>
 
-            {/* 学科別GPA実態 */}
-            {facultyGpas.length > 0 && (
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                            <Users className="h-4 w-4 text-blue-500" />
-                            学科別GPA実態
-                        </CardTitle>
-                        <CardDescription>全体平均 <span className="font-bold text-foreground">{stats!.averageGpa.toFixed(2)}</span></CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                        {facultyGpas.map(([fac, gpa]) => (
-                            <div key={fac} className="flex items-center gap-3">
-                                <span className="text-xs text-muted-foreground w-24 truncate shrink-0">{fac}</span>
-                                <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-                                    <div className="h-full bg-blue-400 rounded-full transition-all" style={{ width: `${Math.min((gpa / 4) * 100, 100)}%` }} />
-                                </div>
-                                <span className="text-xs font-bold text-blue-600 w-8 text-right shrink-0">{gpa}</span>
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
-            )}
-
-            {/* 個人成績 */}
-            <div className="grid gap-4 grid-cols-2">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium">通算GPA</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{analysisData.gpa.cumulative}</div>
-                        <p className="text-xs text-muted-foreground">解析データより</p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium">修得単位数</CardTitle>
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">
-                            {analysisData.earnedCredits} / {analysisData.graduationRequirement.total}
-                        </div>
-                        <div className="mt-2 h-1 w-full bg-secondary rounded-full overflow-hidden">
-                            <div className="h-full bg-primary transition-all duration-500" style={{ width: `${analysisData.graduationRequirement.percentage}%` }} />
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* 評価分布 */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-sm font-medium">評価分布</CardTitle>
-                    <CardDescription>S / A / B / C / F の取得数</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <ResponsiveContainer width="100%" height={220}>
-                        <BarChart data={gradeDist}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                            <XAxis dataKey="grade" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                            <Tooltip cursor={{ fill: 'transparent' }} />
-                            <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                                {gradeDist.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} />
+            <div className="grid md:grid-cols-2 gap-5">
+                {/* 左カラム: 学科別GPA + 個人成績 */}
+                <div className="space-y-5">
+                    {facultyGpas.length > 0 && (
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                    <Users className="h-4 w-4 text-blue-500" />
+                                    学科別GPA実態
+                                </CardTitle>
+                                <CardDescription>全体平均 <span className="font-bold text-foreground">{stats!.averageGpa.toFixed(2)}</span></CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                {facultyGpas.map(([fac, gpa]) => (
+                                    <div key={fac} className="flex items-center gap-3">
+                                        <span className="text-xs text-muted-foreground w-24 truncate shrink-0">{fac}</span>
+                                        <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                                            <div className="h-full bg-blue-400 rounded-full transition-all" style={{ width: `${Math.min((gpa / 4) * 100, 100)}%` }} />
+                                        </div>
+                                        <span className="text-xs font-bold text-blue-600 w-8 text-right shrink-0">{gpa}</span>
+                                    </div>
                                 ))}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
-                </CardContent>
-            </Card>
+                            </CardContent>
+                        </Card>
+                    )}
 
-            {/* 卒業要件チェック */}
-            {faculty === '経済学部' ? (
-                <GraduationCheck grades={analysisData.grades} />
-            ) : (
-                <div className="rounded-xl border bg-card px-4 py-5 text-center space-y-1">
-                    <p className="text-sm font-semibold text-muted-foreground">卒業要件チェック</p>
-                    <p className="text-xs text-muted-foreground">
-                        {faculty ? `${faculty}は未対応です。` : '学部未選択のため表示できません。'}
-                        現在、経済学部のみ対応しています。
-                    </p>
+                    <div className="grid gap-4 grid-cols-2">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                <CardTitle className="text-sm font-medium">通算GPA</CardTitle>
+                                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{analysisData.gpa.cumulative}</div>
+                                <p className="text-xs text-muted-foreground">解析データより</p>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                <CardTitle className="text-sm font-medium">修得単位数</CardTitle>
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">
+                                    {analysisData.earnedCredits} / {analysisData.graduationRequirement.total}
+                                </div>
+                                <div className="mt-2 h-1 w-full bg-secondary rounded-full overflow-hidden">
+                                    <div className="h-full bg-primary transition-all duration-500" style={{ width: `${analysisData.graduationRequirement.percentage}%` }} />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
-            )}
+
+                {/* 右カラム: 評価分布 + 卒業要件 */}
+                <div className="space-y-5">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-sm font-medium">評価分布</CardTitle>
+                            <CardDescription>S / A / B / C / F の取得数</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ResponsiveContainer width="100%" height={220}>
+                                <BarChart data={gradeDist}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis dataKey="grade" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                                    <Tooltip cursor={{ fill: 'transparent' }} />
+                                    <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                                        {gradeDist.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </CardContent>
+                    </Card>
+
+                    {faculty === '経済学部' ? (
+                        <GraduationCheck grades={analysisData.grades} />
+                    ) : (
+                        <div className="rounded-xl border bg-card px-4 py-5 text-center space-y-1">
+                            <p className="text-sm font-semibold text-muted-foreground">卒業要件チェック</p>
+                            <p className="text-xs text-muted-foreground">
+                                {faculty ? `${faculty}は未対応です。` : '学部未選択のため表示できません。'}
+                                現在、経済学部のみ対応しています。
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }
