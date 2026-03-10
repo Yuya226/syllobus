@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 export interface GradeDist {
-    S: number; A: number; B: number; C: number; F: number;
+    S: number; A: number; B: number; C: number; F: number; P: number;
 }
 
 export interface CourseResult {
@@ -35,7 +35,7 @@ function buildDistMap(
     const map = new Map<string, GradeDist & { total: number }>();
     for (const row of rows) {
         if (!row.grade) continue;
-        if (!['S', 'A', 'B', 'C', 'F'].includes(row.grade)) continue;
+        if (!['S', 'A', 'B', 'C', 'F', 'P'].includes(row.grade)) continue;
         const key = row.course_code
             ? `${row.course_code}-${row.year ?? ''}`
             : row.subject_name;
@@ -45,7 +45,7 @@ function buildDistMap(
             if (seen.has(dedup)) continue;
             seen.add(dedup);
         }
-        const entry = map.get(key) ?? { S: 0, A: 0, B: 0, C: 0, F: 0, total: 0 };
+        const entry = map.get(key) ?? { S: 0, A: 0, B: 0, C: 0, F: 0, P: 0, total: 0 };
         entry[row.grade as keyof GradeDist]++;
         entry.total++;
         map.set(key, entry);
@@ -60,6 +60,7 @@ function toGradeDist(d: GradeDist & { total: number }): GradeDist {
         B: Math.round(d.B / d.total * 100) / 100,
         C: Math.round(d.C / d.total * 100) / 100,
         F: Math.round(d.F / d.total * 100) / 100,
+        P: Math.round(d.P / d.total * 100) / 100,
     };
 }
 

@@ -14,6 +14,7 @@ function GradeBar({ dist, total }: { dist: GradeDist; total: number }) {
         { key: 'B', color: 'bg-yellow-400',  label: 'B' },
         { key: 'C', color: 'bg-orange-400',  label: 'C' },
         { key: 'F', color: 'bg-red-500',     label: 'F' },
+        { key: 'P', color: 'bg-teal-400',    label: 'P' },
     ];
     return (
         <div className="mt-1.5 space-y-1">
