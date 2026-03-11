@@ -23,29 +23,30 @@ const EMPTY: AggregateStats = {
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
-    const sessionId = searchParams.get('session_id');
-
-    // session_id の形式チェック
-    if (!sessionId || !UUID_RE.test(sessionId)) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // grade_submissions に session_id が存在するか確認
-    const { count, error: authError } = await getSupabaseAdmin()
-        .from('grade_submissions')
-        .select('*', { count: 'exact', head: true })
-        .eq('session_id', sessionId);
-
-    if (authError) {
-        console.error('Supabase auth check error:', authError);
-        return NextResponse.json({ error: 'DB error' }, { status: 500 });
-    }
-    if (!count || count === 0) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const userGpa = parseFloat(searchParams.get('gpa') ?? 'NaN');
     const personalized = !isNaN(userGpa);
+
+    // パーソナライズ（gpa あり）のみ session_id 認証を要求する。
+    // 非パーソナライズ（参加者数・学部別GPAなど）は未アップロードユーザーにも公開する。
+    if (personalized) {
+        const sessionId = searchParams.get('session_id');
+        if (!sessionId || !UUID_RE.test(sessionId)) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { count, error: authError } = await getSupabaseAdmin()
+            .from('grade_submissions')
+            .select('*', { count: 'exact', head: true })
+            .eq('session_id', sessionId);
+
+        if (authError) {
+            console.error('Supabase auth check error:', authError);
+            return NextResponse.json({ error: 'DB error' }, { status: 500 });
+        }
+        if (!count || count === 0) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+    }
 
     // Return cached result for non-personalized requests when cache is warm.
     if (!personalized && cachedStats && Date.now() - cacheTs < CACHE_TTL) {

@@ -21,9 +21,11 @@ export default function Dashboard() {
         setSessionId(id);
 
         const rawAnalysis = localStorage.getItem('handai_analysis_data');
-        const params = new URLSearchParams({ session_id: id });
+        const params = new URLSearchParams();
         if (rawAnalysis) {
+            // パーソナライズ統計は gpa + session_id の両方が必要
             params.set('gpa', String((JSON.parse(rawAnalysis) as { gpa: { cumulative: number } }).gpa.cumulative));
+            params.set('session_id', id);
         }
 
         fetch(`/api/stats?${params}`)
