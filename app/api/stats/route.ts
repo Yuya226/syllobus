@@ -8,6 +8,8 @@ let cachedStats: AggregateStats | null = null;
 let cacheTs = 0;
 const CACHE_TTL = 60_000; // 60 s
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const EMPTY: AggregateStats = {
     totalParticipants: 0,
     collectionRate: 0,
@@ -21,6 +23,27 @@ const EMPTY: AggregateStats = {
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
+    const sessionId = searchParams.get('session_id');
+
+    // session_id の形式チェック
+    if (!sessionId || !UUID_RE.test(sessionId)) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // grade_submissions に session_id が存在するか確認
+    const { count, error: authError } = await getSupabaseAdmin()
+        .from('grade_submissions')
+        .select('*', { count: 'exact', head: true })
+        .eq('session_id', sessionId);
+
+    if (authError) {
+        console.error('Supabase auth check error:', authError);
+        return NextResponse.json({ error: 'DB error' }, { status: 500 });
+    }
+    if (!count || count === 0) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const userGpa = parseFloat(searchParams.get('gpa') ?? 'NaN');
     const personalized = !isNaN(userGpa);
 

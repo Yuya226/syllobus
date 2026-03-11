@@ -21,13 +21,14 @@ export default function Dashboard() {
         setSessionId(id);
 
         const rawAnalysis = localStorage.getItem('handai_analysis_data');
-        const gpaParam = rawAnalysis
-            ? `?gpa=${(JSON.parse(rawAnalysis) as { gpa: { cumulative: number } }).gpa.cumulative}`
-            : '';
+        const params = new URLSearchParams({ session_id: id });
+        if (rawAnalysis) {
+            params.set('gpa', String((JSON.parse(rawAnalysis) as { gpa: { cumulative: number } }).gpa.cumulative));
+        }
 
-        fetch(`/api/stats${gpaParam}`)
-            .then(r => r.json())
-            .then((s: AggregateStats) => setStats(s))
+        fetch(`/api/stats?${params}`)
+            .then(r => r.ok ? r.json() : null)
+            .then((s: AggregateStats | null) => { if (s) setStats(s); })
             .catch(() => {});
 
         fetch(`/api/session-info?session_id=${id}`)
