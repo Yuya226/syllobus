@@ -16,9 +16,6 @@ function calcDeviation(userGpa: number, mean: number, stdDev: number): number | 
     return Math.round((50 + 10 * (userGpa - mean) / stdDev) * 10) / 10;
 }
 
-const LAUNCH_DATE = new Date('2026-03-02').getTime();
-const FALLBACK_COUNT = 200 + Math.floor((Date.now() - LAUNCH_DATE) / (1000 * 60 * 60 * 24)) * 8;
-
 interface Props {
     stats: AggregateStats | null;
     sessionId: string;
@@ -38,7 +35,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
         return (localStorage.getItem('handai_faculty') as Faculty | null) ?? '';
     });
 
-    const participantCount = stats?.totalParticipants ?? FALLBACK_COUNT;
+    const participantCount = stats?.totalParticipants ?? null;
 
     const handleConfirm = (confirmedGrades: Grade[]) => {
         const { cumulative, semesters, earnedCredits } = calculateGPA(confirmedGrades);
@@ -65,9 +62,9 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
             }).catch(err => console.error("save-grades failed:", err));
         }
 
-        fetch(`/api/stats?gpa=${result.gpa.cumulative}`)
-            .then(r => r.json())
-            .then((s: AggregateStats) => onStatsUpdate(s))
+        fetch(`/api/stats?gpa=${result.gpa.cumulative}&session_id=${sessionId}`)
+            .then(r => r.ok ? r.json() : null)
+            .then((s: AggregateStats | null) => { if (s) onStatsUpdate(s); })
             .catch(err => console.error("stats fetch failed:", err));
     };
 

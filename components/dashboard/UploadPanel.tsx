@@ -32,7 +32,7 @@ const placeholderCourses = ['線形代数学', '解析学入門', '有機化学'
 
 interface Props {
     stats: AggregateStats | null;
-    participantCount: number;
+    participantCount: number | null;
     faculty: Faculty | '';
     onFacultyChange: (f: Faculty | '') => void;
     onGradesParsed: (grades: Grade[]) => void;
@@ -122,7 +122,9 @@ export default function UploadPanel({ stats, participantCount, faculty, onFacult
                     <div className="px-4 py-3 border-b flex items-center gap-2">
                         <TrendingUp className="h-4 w-4 text-primary" />
                         <span className="text-sm font-semibold">GPA偏差値</span>
-                        <Badge variant="secondary" className="ml-auto text-xs">{participantCount}人の母数</Badge>
+                        {participantCount != null && (
+                            <Badge variant="secondary" className="ml-auto text-xs">{participantCount}人の母数</Badge>
+                        )}
                     </div>
                     <div className="px-4 py-6 flex flex-col items-center gap-1 select-none">
                         <p className="text-xs text-muted-foreground">あなたの偏差値</p>
@@ -244,7 +246,10 @@ export default function UploadPanel({ stats, participantCount, faculty, onFacult
             )}
 
             <p className="text-center text-sm text-muted-foreground">
-                🔥 すでに <span className="font-bold text-orange-500">{participantCount}</span> 人が参加
+                {participantCount != null
+                    ? <>🔥 すでに <span className="font-bold text-orange-500">{participantCount}</span> 人が参加</>
+                    : <>データ取得中...</>
+                }
             </p>
         </div>
     );

@@ -26,7 +26,7 @@ interface Props {
     analysisData: AnalysisResult;
     stats: AggregateStats | null;
     deviation: number | null;
-    participantCount: number;
+    participantCount: number | null;
 }
 
 export default function GpaDeviationCard({ analysisData, stats, deviation, participantCount }: Props) {
@@ -51,7 +51,7 @@ export default function GpaDeviationCard({ analysisData, stats, deviation, parti
         <Card className="overflow-hidden border-0 shadow-lg">
             <div className={`bg-gradient-to-br ${deviation != null ? deviationColor(deviation) : 'from-primary to-blue-600'} p-6 text-white`}>
                 <p className="text-sm font-medium opacity-80 mb-1">
-                    阪大内GPA偏差値｜{stats?.totalParticipants ?? participantCount}人の母数
+                    阪大内GPA偏差値｜{(stats?.totalParticipants ?? participantCount) != null ? `${stats?.totalParticipants ?? participantCount}人の母数` : 'データ取得中...'}
                 </p>
                 {deviation != null ? (
                     <>
