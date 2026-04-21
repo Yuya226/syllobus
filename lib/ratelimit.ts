@@ -9,9 +9,13 @@ export const ratelimit = new Ratelimit({
 
 export async function checkRateLimit(req: Request): Promise<Response | null> {
     const ip = req.headers.get('x-forwarded-for') ?? 'anonymous';
-    const { success } = await ratelimit.limit(ip);
-    if (!success) {
-        return Response.json({ error: 'Too many requests' }, { status: 429 });
+    try {
+        const { success } = await ratelimit.limit(ip);
+        if (!success) {
+            return Response.json({ error: 'Too many requests' }, { status: 429 });
+        }
+    } catch {
+        // Redis unavailable — fail open
     }
     return null;
 }

@@ -117,17 +117,7 @@ export default function StatsPanel({ analysisData, stats, faculty }: Props) {
             </Card>
 
             {/* 下段: 卒業要件（全幅） */}
-            {faculty === '経済学部' ? (
-                <GraduationCheck grades={analysisData.grades} />
-            ) : (
-                <div className="rounded-xl border bg-card px-4 py-5 text-center space-y-1">
-                    <p className="text-sm font-semibold text-muted-foreground">卒業要件チェック</p>
-                    <p className="text-xs text-muted-foreground">
-                        {faculty ? `${faculty}は未対応です。` : '学部未選択のため表示できません。'}
-                        現在、経済学部のみ対応しています。
-                    </p>
-                </div>
-            )}
+            <GraduationCheck grades={analysisData.grades} faculty={faculty} />
         </div>
     );
 }

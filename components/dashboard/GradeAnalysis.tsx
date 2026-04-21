@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
 import type { AnalysisResult, AggregateStats, Faculty, Grade } from "@/lib/types";
@@ -34,6 +34,47 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
         if (typeof window === "undefined") return '';
         return (localStorage.getItem('handai_faculty') as Faculty | null) ?? '';
     });
+    // localStorage にデータがなく session_id がある場合、Supabase から復元が必要な可能性がある
+    const [restoring, setRestoring] = useState(() => {
+        if (typeof window === "undefined") return false;
+        const noLocalData = localStorage.getItem('handai_analysis_data') === null;
+        const hasSession = localStorage.getItem('handai_session_id') !== null;
+        return noLocalData && hasSession;
+    });
+
+    // localStorage が空でも session_id が Supabase にあれば成績を復元する
+    useEffect(() => {
+        if (analysisData !== null || !sessionId) return;
+        setRestoring(true);
+        fetch(`/api/session-info?session_id=${sessionId}`)
+            .then(r => r.json())
+            .then(({ hasSubmission, grades: savedGrades, faculty: savedFaculty }: {
+                hasSubmission: boolean;
+                grades?: Grade[];
+                faculty?: string | null;
+            }) => {
+                if (!hasSubmission || !savedGrades?.length) return;
+                const { cumulative, semesters, earnedCredits } = calculateGPA(savedGrades);
+                const result: AnalysisResult = {
+                    grades: savedGrades,
+                    gpa: { cumulative, semesters },
+                    earnedCredits,
+                    graduationRequirement: {
+                        total: TOTAL_REQUIRED_CREDITS,
+                        current: earnedCredits,
+                        percentage: Math.round((earnedCredits / TOTAL_REQUIRED_CREDITS) * 100),
+                    },
+                };
+                localStorage.setItem('handai_analysis_data', JSON.stringify(result));
+                if (savedFaculty) {
+                    setFaculty(savedFaculty as Faculty);
+                    localStorage.setItem('handai_faculty', savedFaculty);
+                }
+                setAnalysisData(result);
+            })
+            .catch(() => {})
+            .finally(() => setRestoring(false));
+    }, [sessionId]);
 
     const participantCount = stats?.totalParticipants ?? null;
 
@@ -85,6 +126,15 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
                     </button>
                 </div>
                 <GradeReview initialGrades={pendingGrades} onConfirm={handleConfirm} />
+            </div>
+        );
+    }
+
+    // ── Restoring View ────────────────────────────────────────────────────────
+    if (restoring) {
+        return (
+            <div className="flex items-center justify-center py-24 text-sm text-muted-foreground">
+                データを復元中...
             </div>
         );
     }

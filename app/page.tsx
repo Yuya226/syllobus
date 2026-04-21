@@ -93,12 +93,16 @@ export default function Home() {
                             </p>
                             <div className="flex flex-col gap-1 w-full pt-1">
                                 <div className="flex items-center justify-between text-xs px-2 py-1 rounded-md bg-green-50 border border-green-200">
-                                    <span className="font-medium text-green-700">経済学部</span>
+                                    <span className="font-medium text-green-700">全11学部 A・B 群</span>
+                                    <span className="text-green-600 font-semibold">対応済み ✓</span>
+                                </div>
+                                <div className="flex items-center justify-between text-xs px-2 py-1 rounded-md bg-green-50 border border-green-200">
+                                    <span className="font-medium text-green-700">経済学部 専門科目</span>
                                     <span className="text-green-600 font-semibold">対応済み ✓</span>
                                 </div>
                                 <div className="flex items-center justify-between text-xs px-2 py-1 rounded-md bg-muted">
-                                    <span className="text-muted-foreground">その他の学部</span>
-                                    <span className="text-muted-foreground">実装中…</span>
+                                    <span className="text-muted-foreground">他学部 専門科目（C群）</span>
+                                    <span className="text-muted-foreground">準備中…</span>
                                 </div>
                             </div>
                         </div>

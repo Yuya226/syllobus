@@ -363,6 +363,7 @@ export async function POST(req: NextRequest) {
 
     } catch (error) {
         console.error('Error processing upload:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+        return NextResponse.json({ error: 'Internal Server Error', detail: msg }, { status: 500 });
     }
 }
