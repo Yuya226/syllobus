@@ -38,7 +38,7 @@ interface Props {
     onGradesParsed: (grades: Grade[]) => void;
 }
 
-export default function UploadPanel({ stats, participantCount, faculty, onFacultyChange, onGradesParsed }: Props) {
+export default function UploadPanel({ participantCount, faculty, onFacultyChange, onGradesParsed }: Props) {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadMode, setUploadMode] = useState<'image' | 'csv'>('image');
@@ -110,15 +110,19 @@ export default function UploadPanel({ stats, participantCount, faculty, onFacult
     };
 
     return (
-        <div className="space-y-5">
-            <div className="text-center space-y-1 pt-2">
-                <h2 className="text-2xl font-black">スクショ1枚で、データを解除</h2>
-                <p className="text-sm text-muted-foreground">出すだけで、みんなの成績の実態が見える。</p>
-            </div>
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="space-y-4">
+                <div className="rounded-md border bg-card p-5 shadow-sm">
+                    <p className="text-xs font-semibold uppercase text-muted-foreground">Unlock Insights</p>
+                    <h2 className="mt-1 text-2xl font-black tracking-tight">成績データをアップロード</h2>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                        KOANのスクリーンショットまたはCSVを解析し、GPA偏差値・成績分布・卒業要件チェックを表示します。
+                    </p>
+                </div>
 
-            <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid md:grid-cols-3 gap-4">
                 {/* GPA偏差値 preview */}
-                <div className="relative rounded-xl border bg-card overflow-hidden">
+                <div className="relative rounded-md border bg-card overflow-hidden shadow-sm">
                     <div className="px-4 py-3 border-b flex items-center gap-2">
                         <TrendingUp className="h-4 w-4 text-primary" />
                         <span className="text-sm font-semibold">GPA偏差値</span>
@@ -133,7 +137,7 @@ export default function UploadPanel({ stats, participantCount, faculty, onFacult
                         </p>
                         <p className="text-xs text-muted-foreground blur-sm">平均よりやや上。安定した成績をキープ...</p>
                     </div>
-                    <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-background/65 backdrop-blur-[2px] flex items-center justify-center">
                         <div className="flex items-center gap-1.5 text-muted-foreground text-sm font-medium">
                             <Lock className="h-4 w-4" />
                             アップすると解除
@@ -142,7 +146,7 @@ export default function UploadPanel({ stats, participantCount, faculty, onFacult
                 </div>
 
                 {/* Faculty GPA preview */}
-                <div className="relative rounded-xl border bg-card overflow-hidden">
+                <div className="relative rounded-md border bg-card overflow-hidden shadow-sm">
                     <div className="px-4 py-3 border-b flex items-center gap-2">
                         <Users className="h-4 w-4 text-blue-500" />
                         <span className="text-sm font-semibold">学科別GPA実態</span>
@@ -159,7 +163,7 @@ export default function UploadPanel({ stats, participantCount, faculty, onFacult
                             </div>
                         ))}
                     </div>
-                    <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-background/65 backdrop-blur-[2px] flex items-center justify-center">
                         <div className="flex items-center gap-1.5 text-muted-foreground text-sm font-medium">
                             <Lock className="h-4 w-4" />
                             アップすると解除
@@ -168,7 +172,7 @@ export default function UploadPanel({ stats, participantCount, faculty, onFacult
                 </div>
 
                 {/* 楽単速報 preview */}
-                <div className="relative rounded-xl border bg-card overflow-hidden">
+                <div className="relative rounded-md border bg-card overflow-hidden shadow-sm">
                     <div className="px-4 py-3 border-b flex items-center gap-2">
                         <Flame className="h-4 w-4 text-orange-500" />
                         <span className="text-sm font-semibold">楽単速報</span>
@@ -183,7 +187,7 @@ export default function UploadPanel({ stats, participantCount, faculty, onFacult
                             </div>
                         ))}
                     </div>
-                    <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-background/65 backdrop-blur-[2px] flex items-center justify-center">
                         <div className="flex items-center gap-1.5 text-muted-foreground text-sm font-medium">
                             <Lock className="h-4 w-4" />
                             アップすると解除
@@ -191,24 +195,31 @@ export default function UploadPanel({ stats, participantCount, faculty, onFacult
                     </div>
                 </div>
             </div>
+            </div>
 
             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={handleFileChange} />
             <input type="file" ref={csvFileInputRef} className="hidden" accept=".csv" onChange={handleCsvChange} />
 
-            {isUploading ? (
-                <div className="space-y-2 pt-1">
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">成績表を解析中...</span>
-                        <span className="font-medium">{uploadProgress}%</span>
-                    </div>
-                    <Progress value={uploadProgress} className="h-2" />
+            <div className="rounded-md border bg-card p-5 shadow-sm">
+                <div className="mb-4">
+                    <p className="text-xs font-semibold uppercase text-muted-foreground">Upload</p>
+                    <h3 className="mt-1 text-lg font-bold">解析を開始</h3>
                 </div>
-            ) : (
+
+                {isUploading ? (
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">成績表を解析中...</span>
+                            <span className="font-medium">{uploadProgress}%</span>
+                        </div>
+                        <Progress value={uploadProgress} className="h-2" />
+                    </div>
+                ) : (
                 <div className="space-y-3">
                     <select
                         value={faculty}
                         onChange={(e) => onFacultyChange(e.target.value as Faculty | '')}
-                        className="w-full h-11 rounded-md border border-input bg-background px-3 text-base shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                        className="w-full h-11 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
                     >
                         <option value="">学部を選択（任意）▼</option>
                         {FACULTY_OPTIONS.map((f) => (
@@ -216,18 +227,18 @@ export default function UploadPanel({ stats, participantCount, faculty, onFacult
                         ))}
                     </select>
 
-                    <div className="flex rounded-lg border overflow-hidden">
+                    <div className="flex rounded-md border bg-secondary/50 p-1">
                         <button
                             onClick={() => setUploadMode('image')}
-                            className={`flex-1 py-2 text-sm font-medium transition-colors ${uploadMode === 'image' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-secondary'}`}
+                            className={`flex-1 rounded px-2 py-2 text-sm font-semibold transition-colors ${uploadMode === 'image' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                         >
-                            📸 スクリーンショット
+                            スクリーンショット
                         </button>
                         <button
                             onClick={() => setUploadMode('csv')}
-                            className={`flex-1 py-2 text-sm font-medium transition-colors ${uploadMode === 'csv' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-secondary'}`}
+                            className={`flex-1 rounded px-2 py-2 text-sm font-semibold transition-colors ${uploadMode === 'csv' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                         >
-                            📄 KOAN CSV
+                            KOAN CSV
                         </button>
                     </div>
 
@@ -245,12 +256,13 @@ export default function UploadPanel({ stats, participantCount, faculty, onFacult
                 </div>
             )}
 
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="mt-4 rounded-md bg-secondary/60 px-3 py-2 text-center text-sm text-muted-foreground">
                 {participantCount != null
-                    ? <>🔥 すでに <span className="font-bold text-orange-500">{participantCount}</span> 人が参加</>
+                    ? <>すでに <span className="font-bold text-foreground">{participantCount}</span> 人が参加</>
                     : <>データ取得中...</>
                 }
             </p>
+            </div>
         </div>
     );
 }

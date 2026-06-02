@@ -42,8 +42,8 @@ function GradeBar({ dist, total }: { dist: GradeDist; total: number }) {
 
 function CourseCard({ course }: { course: CourseResult }) {
     return (
-        <div className="rounded-lg px-2 py-2.5 hover:bg-muted/50 transition-colors">
-            <p className="text-sm font-medium truncate">{course.name}</p>
+        <div className="rounded-md border border-transparent px-3 py-3 hover:border-border hover:bg-muted/45 transition-colors">
+            <p className="text-sm font-semibold truncate">{course.name}</p>
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 {course.year && <span className="text-xs text-muted-foreground">{course.year}年度</span>}
                 {course.teacher && <span className="text-xs text-muted-foreground">{course.teacher}</span>}
@@ -146,14 +146,14 @@ export default function CourseSearch() {
     return (
         <div className="space-y-4">
             {/* 検索バー */}
-            <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <div className="relative rounded-md border bg-card p-2 shadow-sm">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                 <input
                     type="text"
                     value={query}
                     onChange={e => setQuery(e.target.value)}
                     placeholder="科目名 or 時間割コードで検索…"
-                    className="w-full h-11 rounded-md border border-input bg-background pl-9 pr-4 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    className="w-full h-11 rounded border border-input bg-background pl-9 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                 />
             </div>
 
@@ -175,7 +175,7 @@ export default function CourseSearch() {
                     <div className="flex gap-1 flex-wrap">
                         <button
                             onClick={() => handleYearFilter(null)}
-                            className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${yearFilter === null ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-input hover:bg-muted'}`}
+                            className={`text-xs px-2.5 py-1 rounded-md border font-semibold transition-colors ${yearFilter === null ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-input hover:bg-muted'}`}
                         >
                             すべての年度
                             {Object.keys(yearCounts).length > 0 && (
@@ -186,7 +186,7 @@ export default function CourseSearch() {
                             <button
                                 key={y}
                                 onClick={() => handleYearFilter(y)}
-                                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${yearFilter === y ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-input hover:bg-muted'}`}
+                                className={`text-xs px-2.5 py-1 rounded-md border font-semibold transition-colors ${yearFilter === y ? 'bg-primary text-primary-foreground border-primary' : 'bg-background text-muted-foreground border-input hover:bg-muted'}`}
                             >
                                 {y}年度
                                 {yearCounts[y] != null && (
@@ -201,7 +201,7 @@ export default function CourseSearch() {
                                 <button
                                     key={key}
                                     onClick={() => handleSort(key)}
-                                    className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${sortKey === key ? 'bg-foreground text-background border-foreground' : 'bg-background text-muted-foreground border-input hover:bg-muted'}`}
+                                    className={`text-xs px-2.5 py-1 rounded-md border font-semibold transition-colors ${sortKey === key ? 'bg-foreground text-background border-foreground' : 'bg-background text-muted-foreground border-input hover:bg-muted'}`}
                                 >
                                     {label}
                                 </button>
@@ -249,7 +249,7 @@ export default function CourseSearch() {
                     )}
 
                     {!loading && results.length > 0 && (
-                        <div className="grid sm:grid-cols-2 gap-1">
+                            <div className="grid sm:grid-cols-2 gap-2">
                             {results.map(course => (
                                 <CourseCard key={course.id} course={course} />
                             ))}

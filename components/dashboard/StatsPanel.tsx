@@ -41,7 +41,7 @@ export default function StatsPanel({ analysisData, stats, faculty }: Props) {
     return (
         <div className="space-y-5">
             {/* 上段: 学科別GPA + 個人成績 */}
-            <div className="grid md:grid-cols-2 gap-5">
+            <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-5">
                 {facultyGpas.length > 0 && (
                     <Card>
                         <CardHeader className="pb-3">

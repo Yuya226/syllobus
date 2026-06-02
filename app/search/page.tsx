@@ -7,8 +7,8 @@ import CourseSearch from "@/components/dashboard/CourseSearch";
 
 export default function SearchPage() {
     return (
-        <div className="flex min-h-screen flex-col bg-muted/20">
-            <header className="sticky top-0 z-30 flex h-14 items-center border-b bg-background px-6 shadow-sm justify-between">
+        <div className="flex min-h-screen flex-col bg-background">
+            <header className="sticky top-0 z-30 flex h-14 items-center border-b bg-background/85 px-4 shadow-sm backdrop-blur-md md:px-8 justify-between">
                 <Link href="/" className="flex items-center gap-1.5 font-bold text-lg text-primary hover:opacity-80 transition-opacity">
                     <TrendingUp className="h-5 w-5" />
                     Syllobus
@@ -21,8 +21,14 @@ export default function SearchPage() {
                 </Button>
             </header>
 
-            <main className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full">
-                <CourseSearch />
+            <main className="flex-1 w-full">
+                <div className="mx-auto w-full max-w-6xl px-4 py-5 md:px-8 md:py-8">
+                    <div className="mb-5 flex flex-col gap-1">
+                        <p className="text-xs font-semibold uppercase text-muted-foreground">Course Search</p>
+                        <h1 className="text-2xl font-black tracking-tight">楽単検索</h1>
+                    </div>
+                    <CourseSearch />
+                </div>
             </main>
         </div>
     );
