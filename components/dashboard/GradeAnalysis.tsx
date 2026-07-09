@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, ListChecks } from "lucide-react";
 import type { AnalysisResult, AggregateStats, Faculty, Grade } from "@/lib/types";
 import { calculateGPA } from "@/lib/gpa";
-import { TOTAL_REQUIRED_CREDITS } from "@/lib/requirements";
+import { getTotalRequiredCredits } from "@/lib/requirements";
 import GradeReview from "@/components/dashboard/GradeReview";
 import UploadPanel from "@/components/dashboard/UploadPanel";
 import GpaDeviationCard from "@/components/dashboard/GpaDeviationCard";
@@ -14,6 +15,21 @@ import StatsPanel from "@/components/dashboard/StatsPanel";
 function calcDeviation(userGpa: number, mean: number, stdDev: number): number | null {
     if (stdDev < 0.01) return null;
     return Math.round((50 + 10 * (userGpa - mean) / stdDev) * 10) / 10;
+}
+
+function buildAnalysisResult(grades: Grade[], faculty: Faculty | ''): AnalysisResult {
+    const { cumulative, semesters, earnedCredits } = calculateGPA(grades);
+    const total = getTotalRequiredCredits(faculty);
+    return {
+        grades,
+        gpa: { cumulative, semesters },
+        earnedCredits,
+        graduationRequirement: {
+            total: total ?? 0,
+            current: earnedCredits,
+            percentage: total ? Math.min(Math.round((earnedCredits / total) * 100), 100) : 0,
+        },
+    };
 }
 
 interface Props {
@@ -54,17 +70,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
                 faculty?: string | null;
             }) => {
                 if (!hasSubmission || !savedGrades?.length) return;
-                const { cumulative, semesters, earnedCredits } = calculateGPA(savedGrades);
-                const result: AnalysisResult = {
-                    grades: savedGrades,
-                    gpa: { cumulative, semesters },
-                    earnedCredits,
-                    graduationRequirement: {
-                        total: TOTAL_REQUIRED_CREDITS,
-                        current: earnedCredits,
-                        percentage: Math.round((earnedCredits / TOTAL_REQUIRED_CREDITS) * 100),
-                    },
-                };
+                const result = buildAnalysisResult(savedGrades, (savedFaculty ?? '') as Faculty | '');
                 localStorage.setItem('handai_analysis_data', JSON.stringify(result));
                 if (savedFaculty) {
                     setFaculty(savedFaculty as Faculty);
@@ -79,17 +85,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
     const participantCount = stats?.totalParticipants ?? null;
 
     const handleConfirm = (confirmedGrades: Grade[]) => {
-        const { cumulative, semesters, earnedCredits } = calculateGPA(confirmedGrades);
-        const result: AnalysisResult = {
-            grades: confirmedGrades,
-            gpa: { cumulative, semesters },
-            earnedCredits,
-            graduationRequirement: {
-                total: TOTAL_REQUIRED_CREDITS,
-                current: earnedCredits,
-                percentage: Math.round((earnedCredits / TOTAL_REQUIRED_CREDITS) * 100),
-            },
-        };
+        const result = buildAnalysisResult(confirmedGrades, faculty);
         setAnalysisData(result);
         setPendingGrades(null);
         localStorage.setItem('handai_analysis_data', JSON.stringify(result));
@@ -169,7 +165,13 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
                     </Button>
                 </div>
             )}
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
+                <Button asChild variant="outline" size="sm" className="gap-2">
+                    <Link href="/courses">
+                        <ListChecks className="h-4 w-4" />
+                        成績を編集
+                    </Link>
+                </Button>
                 <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
                     <RotateCcw className="h-4 w-4" />
                     もう一度

@@ -102,15 +102,30 @@ async function fetchGradeRowsForSubjects(
     return results.flatMap(r => r.data ?? []);
 }
 
+function distOf(s: any, distMap: Map<string, GradeDist & { total: number }>) {
+    return (s.code ? distMap.get(`${s.code}-${s.year ?? ''}`) : null) ?? distMap.get(s.name);
+}
+
 function saRate(s: any, distMap: Map<string, GradeDist & { total: number }>): number {
-    const d = (s.code ? distMap.get(`${s.code}-${s.year ?? ''}`) : null) ?? distMap.get(s.name);
+    const d = distOf(s, distMap);
     return d && d.total > 0 ? (d.S + d.A) / d.total : -1;
+}
+
+function failRate(s: any, distMap: Map<string, GradeDist & { total: number }>): number {
+    const d = distOf(s, distMap);
+    return d && d.total > 0 ? d.F / d.total : -1;
+}
+
+function sampleCount(s: any, distMap: Map<string, GradeDist & { total: number }>): number {
+    return distOf(s, distMap)?.total ?? 0;
 }
 
 function applySort(subjects: any[], sort: string, distMap: Map<string, GradeDist & { total: number }>): any[] {
     return [...subjects].sort((a, b) => {
-        if (sort === 'year_desc') return (b.year ?? 0) - (a.year ?? 0);
-        if (sort === 'year_asc')  return (a.year ?? 0) - (b.year ?? 0);
+        if (sort === 'year_desc')  return (b.year ?? 0) - (a.year ?? 0);
+        if (sort === 'year_asc')   return (a.year ?? 0) - (b.year ?? 0);
+        if (sort === 'fail_rate')  return failRate(b, distMap) - failRate(a, distMap);
+        if (sort === 'count')      return sampleCount(b, distMap) - sampleCount(a, distMap);
         return saRate(b, distMap) - saRate(a, distMap);
     });
 }

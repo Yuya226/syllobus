@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Search, BookOpen, AlertCircle, GraduationCap, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, BookOpen, AlertCircle, GraduationCap, ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { CourseResult, CoursesResponse, GradeDist } from "@/app/api/courses/route";
 
-type SortKey = 'year_desc' | 'year_asc' | 'sa_rate';
+type SortKey = 'year_desc' | 'year_asc' | 'sa_rate' | 'fail_rate' | 'count';
 
 function GradeBar({ dist, total }: { dist: GradeDist; total: number }) {
     const segments: { key: keyof GradeDist; color: string; label: string }[] = [
@@ -40,9 +40,100 @@ function GradeBar({ dist, total }: { dist: GradeDist; total: number }) {
     );
 }
 
-function CourseCard({ course }: { course: CourseResult }) {
+const DETAIL_SEGMENTS: { key: keyof GradeDist; color: string; label: string }[] = [
+    { key: 'S', color: 'bg-emerald-500', label: 'S' },
+    { key: 'A', color: 'bg-blue-500',    label: 'A' },
+    { key: 'B', color: 'bg-yellow-400',  label: 'B' },
+    { key: 'C', color: 'bg-orange-400',  label: 'C' },
+    { key: 'F', color: 'bg-red-500',     label: 'F' },
+    { key: 'P', color: 'bg-teal-400',    label: 'P' },
+];
+
+function CourseDetailModal({ course, onClose }: { course: CourseResult; onClose: () => void }) {
+    const dist = course.gradeDist;
+    const total = course.totalCount ?? 0;
+    const saRate = dist ? Math.round((dist.S + dist.A) * 100) : null;
+    const failRate = dist ? Math.round(dist.F * 100) : null;
+
     return (
-        <div className="rounded-md border border-transparent px-3 py-3 hover:border-border hover:bg-muted/45 transition-colors">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onClick={onClose}
+        >
+            <div
+                className="w-full max-w-md rounded-lg bg-card border shadow-xl p-5 space-y-4"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <h3 className="text-base font-bold leading-snug">{course.name}</h3>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap text-xs text-muted-foreground">
+                            {course.year && <span>{course.year}年度</span>}
+                            {course.teacher && <span>{course.teacher}</span>}
+                            {course.credits && <span>{course.credits}単位</span>}
+                            {course.semester && <span>{course.semester}</span>}
+                            {course.code && <span className="font-mono">{course.code}</span>}
+                            {course.category && <span>{course.category}</span>}
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="shrink-0 p-1 rounded-md hover:bg-muted transition-colors" aria-label="閉じる">
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+
+                {dist && total > 0 ? (
+                    <>
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                            <div className="rounded-md bg-muted/50 py-2">
+                                <p className="text-lg font-bold text-emerald-600">{saRate}%</p>
+                                <p className="text-[10px] text-muted-foreground">S+A率</p>
+                            </div>
+                            <div className="rounded-md bg-muted/50 py-2">
+                                <p className="text-lg font-bold text-red-600">{failRate}%</p>
+                                <p className="text-[10px] text-muted-foreground">不可率</p>
+                            </div>
+                            <div className="rounded-md bg-muted/50 py-2">
+                                <p className="text-lg font-bold">{total}</p>
+                                <p className="text-[10px] text-muted-foreground">データ数</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            {DETAIL_SEGMENTS.map(({ key, color, label }) => {
+                                const rate = dist[key];
+                                if (rate <= 0) return null;
+                                return (
+                                    <div key={key} className="flex items-center gap-2 text-xs">
+                                        <span className="w-4 font-bold">{label}</span>
+                                        <div className="flex-1 h-3 bg-secondary rounded-sm overflow-hidden">
+                                            <div className={`h-full ${color} transition-all`} style={{ width: `${rate * 100}%` }} />
+                                        </div>
+                                        <span className="w-16 text-right tabular-nums text-muted-foreground">
+                                            {Math.round(rate * 100)}%（約{Math.round(rate * total)}人）
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <p className="text-[10px] text-muted-foreground leading-relaxed">
+                            ※ ユーザーがアップロードした成績データに基づく分布です。実際の成績分布とは異なる場合があります。
+                        </p>
+                    </>
+                ) : (
+                    <p className="py-4 text-center text-sm text-muted-foreground">この科目の成績データはまだありません。</p>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function CourseCard({ course, onClick }: { course: CourseResult; onClick: () => void }) {
+    return (
+        <button
+            onClick={onClick}
+            className="w-full text-left rounded-md border border-transparent px-3 py-3 hover:border-border hover:bg-muted/45 transition-colors cursor-pointer"
+        >
             <p className="text-sm font-semibold truncate">{course.name}</p>
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 {course.year && <span className="text-xs text-muted-foreground">{course.year}年度</span>}
@@ -56,7 +147,7 @@ function CourseCard({ course }: { course: CourseResult }) {
             ) : (
                 <p className="text-[10px] text-muted-foreground mt-1">成績データなし</p>
             )}
-        </div>
+        </button>
     );
 }
 
@@ -86,7 +177,15 @@ export default function CourseSearch() {
     const [searched, setSearched] = useState(false);
     const [sortKey, setSortKey] = useState<SortKey>('sa_rate');
     const [yearFilter, setYearFilter] = useState<number | null>(null);
+    const [selectedCourse, setSelectedCourse] = useState<CourseResult | null>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        if (!selectedCourse) return;
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedCourse(null); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [selectedCourse]);
 
     const isSearchMode = query.trim().length > 0;
 
@@ -195,9 +294,9 @@ export default function CourseSearch() {
                             </button>
                         ))}
                     </div>
-                    <div className="flex items-center justify-between gap-2">
-                        <div className="flex gap-1">
-                            {([['sa_rate', 'S+A率順'], ['year_desc', '新しい順'], ['year_asc', '古い順']] as [SortKey, string][]).map(([key, label]) => (
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex gap-1 flex-wrap">
+                            {([['sa_rate', 'S+A率順'], ['fail_rate', '不可率順'], ['count', 'データ数順'], ['year_desc', '新しい順'], ['year_asc', '古い順']] as [SortKey, string][]).map(([key, label]) => (
                                 <button
                                     key={key}
                                     onClick={() => handleSort(key)}
@@ -251,12 +350,16 @@ export default function CourseSearch() {
                     {!loading && results.length > 0 && (
                             <div className="grid sm:grid-cols-2 gap-2">
                             {results.map(course => (
-                                <CourseCard key={course.id} course={course} />
+                                <CourseCard key={course.id} course={course} onClick={() => setSelectedCourse(course)} />
                             ))}
                         </div>
                     )}
                 </CardContent>
             </Card>
+
+            {selectedCourse && (
+                <CourseDetailModal course={selectedCourse} onClose={() => setSelectedCourse(null)} />
+            )}
         </div>
     );
 }

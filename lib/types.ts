@@ -68,7 +68,6 @@ export interface HardCourse {
 
 export interface AggregateStats {
     totalParticipants: number;
-    collectionRate: number;
     averageGpa: number;
     stdDev: number;
     userPercentile: number;

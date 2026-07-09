@@ -12,7 +12,6 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 const EMPTY: AggregateStats = {
     totalParticipants: 0,
-    collectionRate: 0,
     averageGpa: 0,
     stdDev: 0,
     userPercentile: 50,

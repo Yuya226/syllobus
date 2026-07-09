@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, AlertCircle, Trash2, ClipboardCheck } from "lucide-react";
+import { CheckCircle2, AlertCircle, Trash2, ClipboardCheck, Plus } from "lucide-react";
 import type { Grade } from "@/lib/types";
+import { calculateGPA } from "@/lib/gpa";
 
 const GRADE_OPTIONS: Grade['grade'][] = ['S', 'A', 'B', 'C', 'F', 'P'];
 
@@ -29,8 +30,20 @@ export default function GradeReview({ initialGrades, onConfirm }: Props) {
     const remove = (idx: number) =>
         setGrades(prev => prev.filter((_, i) => i !== idx));
 
+    const addRow = () =>
+        setGrades(prev => [...prev, {
+            subject: '',
+            teacher: '',
+            semester: null,
+            credits: 2,
+            grade: null,
+            year: new Date().getFullYear(),
+        }]);
+
     const earned = grades.filter(g => g.grade !== 'F' && g.grade !== null).reduce((s, g) => s + g.credits, 0);
     const hasUnknown = grades.some(g => g.grade === null);
+    const hasEmptySubject = grades.some(g => !g.subject.trim());
+    const previewGpa = calculateGPA(grades).cumulative;
 
     return (
         <div className="space-y-4">
@@ -87,7 +100,17 @@ export default function GradeReview({ initialGrades, onConfirm }: Props) {
                                     ? <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
                                     : <AlertCircle  className="h-3 w-3 text-amber-500 shrink-0" />
                                 }
-                                <span className="truncate text-xs font-medium">{g.subject}</span>
+                                <input
+                                    type="text"
+                                    value={g.subject}
+                                    onChange={e => update(i, { subject: e.target.value })}
+                                    placeholder="科目名を入力"
+                                    className={`w-full min-w-0 truncate text-xs font-medium bg-transparent border-b focus:outline-none py-0.5 ${
+                                        !g.subject.trim()
+                                            ? 'border-rose-400 placeholder:text-rose-400'
+                                            : 'border-transparent hover:border-border focus:border-primary'
+                                    }`}
+                                />
                             </div>
                             <p className="text-[10px] text-muted-foreground ml-4 leading-tight">
                                 {g.courseCode ?? '—'} · {g.year}
@@ -139,16 +162,26 @@ export default function GradeReview({ initialGrades, onConfirm }: Props) {
                 ))}
             </div>
 
+            {/* OCR漏れ科目の手動追加 */}
+            <button
+                onClick={addRow}
+                className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed py-2 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/40 hover:bg-muted/30 transition-colors"
+            >
+                <Plus className="h-3.5 w-3.5" />
+                科目を追加（OCRで読み取れなかった科目）
+            </button>
+
             {/* フッター */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
                 <p className="text-xs text-muted-foreground">
                     {grades.length}科目 · 修得見込み <span className="font-semibold text-foreground">{earned}</span> 単位
+                    · GPA <span className="font-semibold text-foreground">{previewGpa}</span>
                 </p>
                 <Button
                     className="ml-auto gap-2"
                     onClick={() => onConfirm(grades)}
-                    disabled={grades.length === 0 || hasUnknown}
-                    title={hasUnknown ? '成績未入力の科目があります' : undefined}
+                    disabled={grades.length === 0 || hasUnknown || hasEmptySubject}
+                    title={hasUnknown ? '成績未入力の科目があります' : hasEmptySubject ? '科目名が未入力の行があります' : undefined}
                 >
                     <ClipboardCheck className="h-4 w-4" />
                     この内容で確定

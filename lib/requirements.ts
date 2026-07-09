@@ -425,6 +425,12 @@ export function gradeKey(grade: Grade): string {
     return `${grade.courseCode ?? grade.subject}-${grade.year}`;
 }
 
+/** 学部の総卒業必要単位数。未確認の学部は null（UI側で総数非表示） */
+export function getTotalRequiredCredits(faculty: Faculty | ''): number | null {
+    if (!faculty) return null;
+    return FACULTY_DEFS[faculty]?.totalRequired ?? null;
+}
+
 // ===== 進捗計算 =====
 
 /**

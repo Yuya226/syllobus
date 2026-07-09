@@ -56,7 +56,7 @@ export default function CoursesPage() {
             graduationRequirement: {
                 total,
                 current: earnedCredits,
-                percentage: Math.min(Math.round((earnedCredits / total) * 100), 100),
+                percentage: total > 0 ? Math.min(Math.round((earnedCredits / total) * 100), 100) : 0,
             },
         };
         setBaseData(newData);
