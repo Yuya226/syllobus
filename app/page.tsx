@@ -68,13 +68,14 @@ export default function Home() {
                         >
                             <div className="mb-3 flex items-center justify-between border-b pb-3">
                                 <div>
-                                    <p className="text-xs font-semibold text-muted-foreground">GPA偏差値</p>
+                                    <p className="text-xs font-semibold text-muted-foreground">GPA偏差値の表示例</p>
                                     <p className="text-4xl font-black text-primary">62.4</p>
                                 </div>
                                 <div className="rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
-                                    参加者集計
+                                    架空の表示例
                                 </div>
                             </div>
+                            <p className="mb-3 text-xs text-muted-foreground">以下は説明用の架空の数値です。実際の学生の集計ではありません。</p>
                             <div className="space-y-3">
                                 {[
                                     ['線形代数学', 'S+A 68%', 'bg-emerald-500'],
