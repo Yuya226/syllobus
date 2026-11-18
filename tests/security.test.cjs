@@ -6,6 +6,7 @@ const { validGrades } = require('../lib/validate-grades.ts');
 const { calculateGPA } = require('../lib/gpa.ts');
 const { parseKoanCSV } = require('../lib/csv.ts');
 const { DEMO_GRADES } = require('../lib/demo.ts');
+const legacyGrades=DEMO_GRADES.map(g=>({...g,categorySource:undefined,passed:undefined}));
 // Never contact production services in regression tests.
 require.cache[require.resolve('../lib/ratelimit.ts')] = { exports: { checkRateLimit: async () => null } };
 const save = require('../app/api/save-grades/route.ts');
@@ -39,7 +40,7 @@ test('session initialization cannot claim a client-supplied identifier', async (
 });
 test('reads, writes and deletes require ownership before any database access', async () => {
     global._supabaseAdmin = { from() { throw Error('Must not reach database'); } };
-    const body = { session_id: idB, grades: DEMO_GRADES, faculty: '経済学部', consent: true };
+    const body = { session_id: idB, grades: legacyGrades, faculty: '経済学部', consent: true };
     for (const token of [undefined, auth.makeWriteToken(idA), 'bogus']) {
         assert.equal((await save.POST(req('/api/save-grades', 'POST', body, token))).status, 403);
         assert.equal((await save.DELETE(req('/api/save-grades?session_id='+idB,'DELETE',undefined,token))).status,403);
@@ -48,7 +49,7 @@ test('reads, writes and deletes require ownership before any database access', a
 });
 test('save requires consent, validates input, recomputes GPA and uses atomic RPC', async () => {
     const token = auth.makeWriteToken(idA);
-    const body = { session_id:idA, grades:DEMO_GRADES, faculty:'経済学部', session_gpa:4, consent:true };
+    const body = { session_id:idA, grades:legacyGrades, faculty:'経済学部', session_gpa:4, consent:true };
     assert.equal((await save.POST(req('/api/save-grades','POST',{...body,consent:false},token))).status,400);
     assert.equal((await save.POST(req('/api/save-grades','POST',{...body,grades:[{}]},token))).status,400);
     let called = false;
@@ -164,4 +165,33 @@ test('economics entrants from 2025 use the published common requirements, withou
     assert.equal(result.byCategory.find(c=>c.category.id==='jiyu_elec').earned,4);
     assert.equal(result.byCategory.find(c=>c.category.id==='spec_elec').earned,0);
     assert.equal(result.byCategory.find(c=>c.category.id==='adv_lib').courses.length,0);
+});
+const creditRecords=require('../app/api/credit-records/route.ts');
+const learningStats=require('../app/api/learning-stats/route.ts');
+const {EMPTY_PROFILE}=require('../lib/learning-profile.ts');
+test('acquisition snapshot read/write/delete reject foreign sessions before database access',async()=>{
+ global._supabaseAdmin={from(){throw Error('Must not access DB')},rpc(){throw Error('Must not access DB')}};
+ for(const token of [undefined,auth.makeWriteToken(idA)]) {
+  assert.equal((await creditRecords.POST(req('/api/credit-records','POST',{session_id:idB},token))).status,403);
+  assert.equal((await creditRecords.GET(req('/api/credit-records?session_id='+idB,'GET',undefined,token))).status,403);
+  assert.equal((await creditRecords.DELETE(req('/api/credit-records?session_id='+idB,'DELETE',undefined,token))).status,403);
+ }
+});
+test('acquisition snapshot requires consent, uses allowlisted atomic save, and fails visibly when migration missing',async()=>{
+ const token=auth.makeWriteToken(idA);const body={session_id:idA,faculty:'経済学部',grades:DEMO_GRADES,profile:EMPTY_PROFILE,consent:true};
+ assert.equal((await creditRecords.POST(req('/api/credit-records','POST',{...body,consent:false},token))).status,400);
+ assert.equal((await save.POST(req('/api/save-grades','POST',body,token))).status,400);
+ let called=false;
+ global._supabaseAdmin={rpc:async(name,args)=>{assert.equal(name,'replace_credit_snapshot');assert.equal(args.target_session,idA);assert.equal(args.payload.grades[0].categorySource,'university-csv');called=true;return {error:null}}};
+ assert.equal((await creditRecords.POST(req('/api/credit-records','POST',body,token))).status,200);assert.ok(called);
+ global._supabaseAdmin={rpc:async()=>({error:{message:'secret DB detail'}})};
+ const failed=await creditRecords.POST(req('/api/credit-records','POST',body,token));assert.equal(failed.status,503);assert.doesNotMatch(JSON.stringify(await failed.json()),/secret DB detail/);
+});
+test('acquisition owner can restore/delete and aggregates do not silently truncate or return errors as empty data',async()=>{
+ const token=auth.makeWriteToken(idA);
+ global._supabaseAdmin={from:()=>({select:()=>({eq:(_,id)=>({maybeSingle:async()=>{assert.equal(id,idA);return {data:{faculty:'経済学部',grades:DEMO_GRADES,profile:EMPTY_PROFILE},error:null}}})})}),rpc:async(name,args)=>{assert.equal(name,'delete_session_records');assert.equal(args.target_session,idA);return {error:null}}};
+ const restored=await creditRecords.GET(req('/api/credit-records?session_id='+idA,'GET',undefined,token));assert.equal(restored.status,200);assert.equal(restored.headers.get('cache-control'),'private, no-store');
+ assert.equal((await creditRecords.DELETE(req('/api/credit-records?session_id='+idA,'DELETE',undefined,token))).status,200);
+ global._supabaseAdmin={from:()=>({select:()=>({order:()=>({range:async()=>({data:null,error:{}})})})})};
+ assert.equal((await learningStats.GET()).status,503);
 });

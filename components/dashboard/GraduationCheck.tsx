@@ -1,4 +1,5 @@
 "use client";
+import FacultyRequirements from "./FacultyRequirements";
 
 import { useState } from "react";
 import {
@@ -417,11 +418,12 @@ export default function GraduationCheck({ grades, faculty }: { grades: Grade[]; 
     const [year, setYear] = useState('');
     const reference = getGraduationReference(faculty, Number(year));
     const uncertain = ['外国語学部', '薬学部', '基礎工学部'].includes(faculty);
+    if (faculty && faculty !== '経済学部') return <FacultyRequirements key={faculty} faculty={faculty} grades={grades}/>;
     return <div className="space-y-3">
         <div className="rounded border bg-card p-4 text-sm space-y-3">
             <h3 className="font-bold">卒業要件の対応範囲</h3>
-            <p>経済学部：専門科目・自由選択を含む参考計算。文学部・人間科学部・法学部・理学部・歯学部・工学部・医学部・保健学科：共通教育のみ。外国語学部・薬学部・基礎工学部：未確認・推定を含むため判定停止中。</p>
-            <p>経済学部は2019〜2024年度入学者用の公式確認表と必要単位数を照合済みで、2025年度以降も参考計算を表示します。2026年度学生便覧にも「2025年度以降入学者用」の同じ確認表が掲載されています。他学部は2025年度資料が基準です。科目の読替・指定科目・外国語の内訳は別途確認が必要で、卒業可否は判定できません。</p>
+            <p>経済学部：専門科目・自由選択を含む参考計算。文学部・人間科学部・法学部・理学部・歯学部・工学部・医学部・保健学科：共通教育のみ。他学部は学科選択後に公式共通教育表との対照を表示します。年度別適用が未確認の部分は確定判定しません。</p>
+            <p>経済学部は2019〜2024年度入学者用の公式確認表と必要単位数を照合済みで、2025年度以降も参考計算を表示します。2026年度学生便覧にも「2025年度以降入学者用」の同じ確認表が掲載されています。他学部は現行公開資料との対照を表示します。科目の読替・指定科目・外国語の内訳は別途確認が必要で、卒業可否は判定できません。</p>
             <label className="block">入学年度 <select value={year} onChange={e => setYear(e.target.value)} className="rounded border bg-background p-2"><option value="">選択してください</option><option value="older">2018年度以前（未検証）</option>{[2019, 2020, 2021, 2022, 2023, 2024].map(y => <option key={y} value={y}>{y}年度{faculty === '経済学部' ? '（参考計算）' : '（未検証）'}</option>)}<option value="2025">2025年度（参考計算）</option><option value="2026">2026年度以降{faculty === '経済学部' ? '（2025年度以降の要件・参考計算）' : '（未検証）'}</option></select></label>
             <p>最終的な卒業要件は、入学年度・学科に対応する大学公式の学生便覧で確認してください。<a href="https://www.celas.osaka-u.ac.jp/education/prerequisite/" target="_blank" rel="noopener noreferrer" className="underline">大学公式・共通教育要件</a></p>
         </div>

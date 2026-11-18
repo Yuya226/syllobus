@@ -1,4 +1,5 @@
 import type { Grade, Faculty } from './types';
+import { universityCategory } from './university-category';
 
 // ===== 型定義 =====
 
@@ -308,6 +309,7 @@ const ECON_CATEGORY_TO_REQ: Record<string, string> = {
  * 基盤教養は科目名で必修/選択必修を判別する。
  */
 export function classifyEcon(grade: Grade): string | null {
+    if (grade.categorySource === 'university-csv') return universityCategory(grade, true);
     const cat = grade.category ?? null;
     if (!cat) return null;
     if (cat === '基盤教養教育科目') {
@@ -422,7 +424,7 @@ export const FACULTY_DEFS: Partial<Record<Faculty, FacultyDef>> = {
 
 /** Grade を一意に識別するキー */
 export function gradeKey(grade: Grade): string {
-    return `${grade.courseCode ?? grade.subject}-${grade.year}`;
+    return JSON.stringify([grade.courseCode ?? grade.subject, grade.year, grade.semester ?? null, grade.category ?? null]);
 }
 
 /** 学部の総卒業必要単位数。未確認の学部は null（UI側で総数非表示） */
@@ -500,6 +502,7 @@ export function calcProgress(
         const cat = grade.category ?? null;
         if (!cat) return null;
         if (def.classifyFn) return def.classifyFn(grade);
+        if (grade.categorySource === 'university-csv') return universityCategory(grade);
         return def.classifyOverrides?.[cat] ?? AB_CATEGORY_MAP[cat] ?? null;
     };
 

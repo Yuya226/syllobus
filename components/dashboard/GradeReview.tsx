@@ -13,22 +13,27 @@ const P_VALID_CATEGORIES = new Set(['学問への扉', '必修科目']);
 
 /** このGradeのP成績が確実にOCR誤認であると判断できるか */
 function isSpuriousP(g: Grade): boolean {
-    return g.grade === 'P' && !!g.category && !P_VALID_CATEGORIES.has(g.category);
+    return g.categorySource !== 'university-csv' && g.grade === 'P' && !!g.category && !P_VALID_CATEGORIES.has(g.category);
 }
 
 interface Props {
     initialGrades: Grade[];
     onConfirm: (grades: Grade[]) => void;
+    onEdited?: () => void;
 }
 
-export default function GradeReview({ initialGrades, onConfirm }: Props) {
+export default function GradeReview({ initialGrades, onConfirm, onEdited }: Props) {
     const [grades, setGrades] = useState<Grade[]>(initialGrades);
 
-    const update = (idx: number, patch: Partial<Grade>) =>
-        setGrades(prev => prev.map((g, i) => i === idx ? { ...g, ...patch } : g));
+    const update = (idx: number, patch: Partial<Grade>) => {
+        onEdited?.();
+        setGrades(prev => prev.map((g, i) => i === idx ? { ...g, ...patch, ...(g.categorySource === 'university-csv' && patch.grade ? {passed:patch.grade !== 'F'} : {}) } : g));
+    };
 
-    const remove = (idx: number) =>
+    const remove = (idx: number) => {
+        onEdited?.();
         setGrades(prev => prev.filter((_, i) => i !== idx));
+    };
 
     const addRow = () =>
         setGrades(prev => [...prev, {
@@ -53,7 +58,7 @@ export default function GradeReview({ initialGrades, onConfirm }: Props) {
                 <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
                     <span>成績・単位数を確認し、誤りがあれば修正してから確定してください。</span>
                     <span className="inline-flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-green-500" />DB照合済み
+                        <CheckCircle2 className="h-3 w-3 text-green-500" />区分あり（CSVまたはDB）
                     </span>
                     <span className="inline-flex items-center gap-1">
                         <AlertCircle className="h-3 w-3 text-amber-500" />未照合
@@ -113,7 +118,7 @@ export default function GradeReview({ initialGrades, onConfirm }: Props) {
                                 />
                             </div>
                             <p className="text-[10px] text-muted-foreground ml-4 leading-tight">
-                                {g.courseCode ?? '—'} · {g.year}
+                                {g.categorySource === 'university-csv' ? g.category : g.courseCode ?? '—'} · {g.year} {g.semester ?? ''}
                                 {g.teacher && g.teacher !== 'Unknown' ? ` · ${g.teacher}` : ''}
                             </p>
                         </div>
@@ -144,10 +149,10 @@ export default function GradeReview({ initialGrades, onConfirm }: Props) {
                         {/* 単位数 */}
                         <input
                             type="number"
-                            min={1}
+                            min={0.1} step="any"
                             max={8}
                             value={g.credits}
-                            onChange={e => update(i, { credits: Math.max(1, Number(e.target.value)) })}
+                            onChange={e => update(i, { credits: Math.max(0.1, Number(e.target.value)) })}
                             className="h-7 w-full rounded border border-input bg-background text-center text-xs focus:outline-none focus:ring-1 focus:ring-ring"
                         />
 
@@ -163,19 +168,19 @@ export default function GradeReview({ initialGrades, onConfirm }: Props) {
             </div>
 
             {/* OCR漏れ科目の手動追加 */}
-            <button
+            {!initialGrades.every(g=>g.categorySource==='university-csv') && <button
                 onClick={addRow}
                 className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed py-2 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/40 hover:bg-muted/30 transition-colors"
             >
                 <Plus className="h-3.5 w-3.5" />
-                科目を追加（OCRで読み取れなかった科目）
-            </button>
+                科目を追加（読み取り漏れ）
+            </button>}
 
             {/* フッター */}
             <div className="flex items-center gap-3 flex-wrap">
                 <p className="text-xs text-muted-foreground">
                     {grades.length}科目 · 修得見込み <span className="font-semibold text-foreground">{earned}</span> 単位
-                    · GPA <span className="font-semibold text-foreground">{previewGpa}</span>
+                    · 取込明細の参考GPA <span className="font-semibold text-foreground">{grades.some(g=>g.grade && g.grade!=='P') ? previewGpa : '対象評語なし'}</span>
                 </p>
                 <Button
                     className="ml-auto gap-2"

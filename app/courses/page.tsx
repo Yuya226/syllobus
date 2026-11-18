@@ -63,10 +63,12 @@ export default function CoursesPage() {
         };
         setBaseData(newData);
         localStorage.setItem("handai_analysis_data", JSON.stringify(newData));
+        const storedProfile=localStorage.getItem('syllobus_learning_profile');
+        if(storedProfile) { try { localStorage.setItem('syllobus_learning_profile',JSON.stringify({...JSON.parse(storedProfile),complete:false})); } catch {} }
     }
 
     function updateGrade(idx: number, field: keyof Grade, value: string | number | null) {
-        const updated = grades.map((g, i) => (i === idx ? { ...g, [field]: value } : g));
+        const updated = grades.map((g, i) => (i === idx ? { ...g, [field]: value, ...(g.categorySource==='university-csv' && field==='grade' ? {passed:value!==null && value!=='F'} : {}) } : g));
         applyUpdate(updated);
     }
 
@@ -102,7 +104,7 @@ export default function CoursesPage() {
                     </Card>
                     <Card className="flex-1">
                         <CardHeader className="pb-1">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">現在のGPA</CardTitle>
+                            <CardTitle className="text-sm font-medium text-muted-foreground">{baseData?.importInfo ? '取込明細の参考GPA' : '現在のGPA'}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <p className="text-2xl font-bold text-primary">{currentGpa}</p>

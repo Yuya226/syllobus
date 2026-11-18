@@ -45,7 +45,7 @@ export default function Dashboard() {
                 <Button asChild variant="outline" size="sm" className="gap-1.5">
                     <Link href="/search">
                         <Search className="h-3.5 w-3.5" />
-                        楽単検索
+                        科目検索
                     </Link>
                 </Button>
             </header>

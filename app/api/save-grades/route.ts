@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     if (!sameOrigin(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     const body = await req.json().catch(() => null);
     if (!ownsSession(req, body?.session_id)) return NextResponse.json({ error: '保存権限を確認できません。ページを再読み込みしてください。' }, { status: 403 });
-    if (!validGrades(body.grades) || !['', ...FACULTY_OPTIONS].includes(body.faculty) || body.consent !== true) {
+    if (!validGrades(body.grades) || body.grades.some((g: import('@/lib/types').Grade) => g.categorySource === 'university-csv') || !['', ...FACULTY_OPTIONS].includes(body.faculty) || body.consent !== true) {
         return NextResponse.json({ error: '成績と保存への同意を確認してください。' }, { status: 400 });
     }
     const limited = await checkRateLimit(req);
@@ -34,6 +34,8 @@ export async function DELETE(req: NextRequest) {
     const id = req.nextUrl.searchParams.get('session_id');
     if (!ownsSession(req, id)) return NextResponse.json({ error: '削除権限を確認できません。' }, { status: 403 });
     try {
+        const creditDelete = await getSupabaseAdmin().from('credit_snapshots').delete().eq('session_id', id);
+        if (creditDelete.error && !['42P01', 'PGRST205'].includes(creditDelete.error.code)) throw new Error('Credit snapshot delete failed');
         const { error } = await getSupabaseAdmin().from('grade_submissions').delete().eq('session_id', id);
         if (error) throw new Error('DB delete failed');
         return NextResponse.json({ ok: true });

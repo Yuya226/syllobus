@@ -1,5 +1,7 @@
 # GUILDデモ公開準備（2026-11-18）
 
+> 追記：単位修得状況CSVへの移行後の仕様・検証・DB復旧条件は [最新設計](credit-status-design.md)、学部別の確認範囲は [公式資料調査](requirements-research.md) を参照。以下は初期調査の記録で、本番へのコードデプロイはその後実施済み。DB復旧・マイグレーション適用は未完了。
+
 ## 調査結果と優先順
 
 既存Next.js App Router / React / Tailwind / Supabase / Google Cloud Visionを維持。

@@ -8,9 +8,13 @@ export interface Grade {
     courseCode?: string;
     /** subjects テーブルの category カラム（例: "liberal-arts", "language-1st" 等） */
     category?: string | null;
+    categoryDetail?: string | null;
+    categorySource?: 'university-csv';
+    passed?: boolean;
 }
 
 export interface AnalysisResult {
+    importInfo?: import('./credit-csv').ImportInfo;
     grades: Grade[];
     gpa: {
         cumulative: number;

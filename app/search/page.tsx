@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { TrendingUp, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import SharedCourseDistributions from '@/components/dashboard/SharedCourseDistributions';
 import CourseSearch from "@/components/dashboard/CourseSearch";
 
 export default function SearchPage() {
@@ -25,9 +26,10 @@ export default function SearchPage() {
                 <div className="mx-auto w-full max-w-6xl px-4 py-5 md:px-8 md:py-8">
                     <div className="mb-5 flex flex-col gap-1">
                         <p className="text-xs font-semibold uppercase text-muted-foreground">Course Search</p>
-                        <h1 className="text-2xl font-black tracking-tight">楽単検索</h1>
+                        <h1 className="text-2xl font-black tracking-tight">科目検索・修得者の成績分布</h1>
                     </div>
-                    <CourseSearch />
+                    <SharedCourseDistributions />
+                    <details className="rounded border p-4"><summary className="font-semibold cursor-pointer">シラバス・従来の履修成績データを検索</summary><p className="my-3 text-sm">下の従来集計は時間割コード中心です。単位修得CSVのデータとは混合しません。</p><CourseSearch /></details>
                 </div>
             </main>
         </div>

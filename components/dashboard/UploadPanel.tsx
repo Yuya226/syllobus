@@ -5,11 +5,11 @@ import UploadGuide from "./UploadGuide";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Upload, TrendingUp, Users, Flame, Lock } from "lucide-react";
+import { Upload } from "lucide-react";
 import type { AnalysisResult, AggregateStats, Faculty, Grade } from "@/lib/types";
 import { FACULTY_OPTIONS } from "@/lib/types";
 import { enrichForReview } from "@/lib/enrich-for-review";
+import { parseCreditCSV, type ImportInfo } from '@/lib/credit-csv';
 import { parseKoanCSV } from "@/lib/csv";
 
 function mergeGrades(allGrades: Grade[][]): Grade[] {
@@ -30,15 +30,12 @@ function mergeGrades(allGrades: Grade[][]): Grade[] {
     return Array.from(map.values());
 }
 
-const placeholderFaculties = [['工学部', 2.71], ['理学部', 2.85], ['経済学部', 2.62]] as [string, number][];
-const placeholderCourses = ['線形代数学', '解析学入門', '有機化学'];
-
 interface Props {
     stats: AggregateStats | null;
     participantCount: number | null;
     faculty: Faculty | '';
     onFacultyChange: (f: Faculty | '') => void;
-    onGradesParsed: (grades: Grade[], warning?: string) => void;
+    onGradesParsed: (grades: Grade[], warning?: string, info?: ImportInfo) => void;
 }
 
 export default function UploadPanel({ participantCount, faculty, onFacultyChange, onGradesParsed }: Props) {
@@ -46,7 +43,7 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
     const [uploadError, setUploadError] = useState('');
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
-    const [uploadMode, setUploadMode] = useState<'image' | 'csv'>('image');
+    const [uploadMode, setUploadMode] = useState<'image' | 'csv'>('csv');
     const errorRef = useRef<HTMLDivElement>(null);
     useEffect(() => { if (uploadError) errorRef.current?.focus(); }, [uploadError]);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -100,9 +97,14 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
         try {
             if (!file.name.toLowerCase().endsWith('.csv') || file.size > 4 * 1024 * 1024) throw new Error('4MB以下のCSVを選び直してください。');
             const buffer = await file.arrayBuffer();
+            const creditImport = parseCreditCSV(buffer);
+            if (creditImport) {
+                onGradesParsed(creditImport.grades, creditImport.info.warnings.join(' '), creditImport.info);
+                return;
+            }
             const parsed = parseKoanCSV(buffer);
             if (parsed.length === 0) {
-                setUploadError('成績データが見つかりませんでした。「履修成績照会」で「過去を含めた全成績」を選び、「CSVに出力する」で保存したファイルを選び直してください。');
+                setUploadError('成績データが見つかりませんでした。「単位修得状況照会」から出力した科目明細入りのCSVを選び直してください。従来の履修成績CSVも補助対応しています。');
                 return;
             }
             setUploadProgress(50);
@@ -127,85 +129,17 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
                     <p className="text-xs font-semibold uppercase text-muted-foreground">Unlock Insights</p>
                     <h2 className="mt-1 text-2xl font-black tracking-tight">成績データをアップロード</h2>
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                        KOANのスクリーンショットまたはCSVを解析し、GPA偏差値・成績分布・卒業要件チェックを表示します。
+                        KOANの単位修得状況CSVを端末内で解析し、単位の推移・区分別の修得状況・卒業要件の対照を表示します。
                     </p>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-4">
-                {/* GPA偏差値 preview */}
-                <div className="relative rounded-md border bg-card overflow-hidden shadow-sm">
-                    <div className="px-4 py-3 border-b flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-semibold">GPA偏差値</span>
-                        {participantCount != null && (
-                            <Badge variant="secondary" className="ml-auto text-xs">{participantCount}セッション</Badge>
-                        )}
-                    </div>
-                    <div className="px-4 py-6 flex flex-col items-center gap-1 select-none">
-                        <p className="text-xs text-muted-foreground">あなたの偏差値</p>
-                        <p className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-600 blur-sm">
-                            62.4
-                        </p>
-                        <p className="text-xs text-muted-foreground blur-sm">平均よりやや上。安定した成績をキープ...</p>
-                    </div>
-                    <div className="absolute inset-0 bg-background/65 backdrop-blur-[2px] flex items-center justify-center">
-                        <div className="flex items-center gap-1.5 text-muted-foreground text-sm font-medium">
-                            <Lock className="h-4 w-4" />
-                            表示例（架空）
-                        </div>
-                    </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                    {[
+                        ['大学の区分で確認', '科目小区分・単位数をCSVからそのまま取り込み、卒業要件と対照します。'],
+                        ['単位の積み上がり', '修得年度・学期ごとに、自分の取得ペースと区分別の単位数を確認できます。'],
+                        ['修得者内で比較', '共有データが十分に集まった科目だけ、同順位を考慮した相対評価を表示します。'],
+                    ].map(([title, description]) => <div key={title} className="rounded-md border bg-card p-4 shadow-sm"><h3 className="font-semibold text-sm">{title}</h3><p className="mt-2 text-xs leading-relaxed text-muted-foreground">{description}</p></div>)}
                 </div>
-
-                {/* Faculty GPA preview */}
-                <div className="relative rounded-md border bg-card overflow-hidden shadow-sm">
-                    <div className="px-4 py-3 border-b flex items-center gap-2">
-                        <Users className="h-4 w-4 text-blue-500" />
-                        <span className="text-sm font-semibold">学科別GPA実態</span>
-                        <Badge variant="secondary" className="ml-auto text-xs">集計中</Badge>
-                    </div>
-                    <div className="px-4 py-3 space-y-2 select-none">
-                        {placeholderFaculties.map(([fac, gpa]) => (
-                            <div key={fac} className="flex items-center gap-3 opacity-40">
-                                <span className="text-xs text-muted-foreground w-20 truncate">{fac}</span>
-                                <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-                                    <div className="h-full bg-blue-400 rounded-full" style={{ width: `${Math.min((gpa / 4) * 100, 100)}%` }} />
-                                </div>
-                                <span className="text-xs font-bold text-blue-600 w-8 text-right blur-sm">{gpa.toFixed(2)}</span>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="absolute inset-0 bg-background/65 backdrop-blur-[2px] flex items-center justify-center">
-                        <div className="flex items-center gap-1.5 text-muted-foreground text-sm font-medium">
-                            <Lock className="h-4 w-4" />
-                            表示例（架空）
-                        </div>
-                    </div>
-                </div>
-
-                {/* 楽単速報 preview */}
-                <div className="relative rounded-md border bg-card overflow-hidden shadow-sm">
-                    <div className="px-4 py-3 border-b flex items-center gap-2">
-                        <Flame className="h-4 w-4 text-orange-500" />
-                        <span className="text-sm font-semibold">楽単速報</span>
-                        <Badge variant="outline" className="ml-auto text-xs border-orange-200 text-orange-600">不可率TOP</Badge>
-                    </div>
-                    <div className="px-4 py-3 space-y-1.5 select-none">
-                        {placeholderCourses.map((s, i) => (
-                            <div key={s} className="flex items-center gap-2">
-                                <span className="text-xs text-muted-foreground w-4">{i + 1}.</span>
-                                <span className="text-xs flex-1 blur-sm">{s}</span>
-                                <Badge variant="destructive" className="text-xs px-1.5 py-0 opacity-30">不可XX%</Badge>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="absolute inset-0 bg-background/65 backdrop-blur-[2px] flex items-center justify-center">
-                        <div className="flex items-center gap-1.5 text-muted-foreground text-sm font-medium">
-                            <Lock className="h-4 w-4" />
-                            表示例（架空）
-                        </div>
-                    </div>
-                </div>
-            </div>
             </div>
 
             <input type="file" ref={fileInputRef} className="hidden" accept="image/png,image/jpeg,image/webp" multiple onChange={handleFileChange} />
@@ -249,12 +183,12 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
                             onClick={() => setUploadMode('csv')}
                             className={`flex-1 rounded px-2 py-2 text-sm font-semibold transition-colors ${uploadMode === 'csv' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                         >
-                            KOAN CSV
+                            単位修得CSV（推奨）
                         </button>
                     </div>
 
                     <UploadGuide mode={uploadMode} />
-                    <label className="flex items-start gap-2 text-sm leading-relaxed"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-1" /><span>解析のためのデータ送信に同意します。画像全体はGoogle Cloud Visionへ、CSVから抽出した成績は本サービスへ送られます。結果はこのブラウザに保存され、サーバー保存は確認画面で別途選べます。<Link href="/about" className="underline">詳細</Link></span></label>
+                    <label className="flex items-start gap-2 text-sm leading-relaxed"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-1" /><span>データの取扱いを確認しました。単位修得CSVは端末内で解析し、保存に同意するまで成績を送信しません。従来の履修成績CSVは科目照合のため本サービスへ、画像全体はGoogle Cloud Visionへ送信します。結果はこのブラウザに保存され、サーバー保存は確認画面で別途選べます。<Link href="/about" className="underline">詳細</Link></span></label>
                     {uploadError && <div ref={errorRef} tabIndex={-1} role="alert" className="rounded border border-red-300 p-3 text-sm text-red-700"><p>{uploadError}</p><a href="#upload-guide" className="underline">取得ガイドを確認</a><p>下のボタンからファイルを選び直せます。</p></div>}
                     {uploadMode === 'image' ? (
                         <Button disabled={!consent} size="lg" className="w-full min-h-12 h-auto whitespace-normal text-base font-bold" onClick={() => fileInputRef.current?.click()}>
@@ -272,7 +206,7 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
 
             <p className="mt-4 rounded-md bg-secondary/60 px-3 py-2 text-center text-sm text-muted-foreground">
                 {participantCount != null
-                    ? <>集計対象 <span className="font-bold text-foreground">{participantCount}</span> セッション</>
+                    ? <>従来形式の集計対象 <span className="font-bold text-foreground">{participantCount}</span> セッション</>
                     : <>統計は未取得または少数のため非公開です。</>
                 }
             </p>

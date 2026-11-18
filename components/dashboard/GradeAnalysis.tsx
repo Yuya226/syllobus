@@ -5,12 +5,16 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, ListChecks } from "lucide-react";
+import { FACULTY_OPTIONS } from "@/lib/types";
 import type { AnalysisResult, AggregateStats, Faculty, Grade } from "@/lib/types";
 import { calculateGPA } from "@/lib/gpa";
 import { getTotalRequiredCredits } from "@/lib/requirements";
 import GradeReview from "@/components/dashboard/GradeReview";
 import UploadPanel from "@/components/dashboard/UploadPanel";
 import GpaDeviationCard from "@/components/dashboard/GpaDeviationCard";
+import LearningProfileEditor from './LearningProfileEditor';
+import LearningInsights from './LearningInsights';
+import { EMPTY_PROFILE, validProfile, type LearningProfile } from '@/lib/learning-profile';
 import StatsPanel from "@/components/dashboard/StatsPanel";
 
 function calcDeviation(userGpa: number, mean: number, stdDev: number): number | null {
@@ -18,11 +22,12 @@ function calcDeviation(userGpa: number, mean: number, stdDev: number): number | 
     return Math.round((50 + 10 * (userGpa - mean) / stdDev) * 10) / 10;
 }
 
-function buildAnalysisResult(grades: Grade[], faculty: Faculty | ''): AnalysisResult {
+function buildAnalysisResult(grades: Grade[], faculty: Faculty | '', importInfo?: AnalysisResult['importInfo']): AnalysisResult {
     const { cumulative, semesters, earnedCredits } = calculateGPA(grades);
     const total = getTotalRequiredCredits(faculty);
     return {
         grades,
+        importInfo,
         gpa: { cumulative, semesters },
         earnedCredits,
         graduationRequirement: {
@@ -45,13 +50,19 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
     const inputStarted = useRef(false);
     const reviewRef = useRef<HTMLDivElement>(null);
     const [reviewWarning, setReviewWarning] = useState('');
+    const [importInfo, setImportInfo] = useState<AnalysisResult['importInfo']>();
+    const [profile, setProfile] = useState<LearningProfile>(() => {
+        if (demo || typeof window === 'undefined') return EMPTY_PROFILE;
+        try { const p=JSON.parse(localStorage.getItem('syllobus_learning_profile')??'null'); return validProfile(p)?p:EMPTY_PROFILE; } catch { return EMPTY_PROFILE; }
+    });
+    const changeProfile = (p: LearningProfile) => { setProfile(p); if(!demo) localStorage.setItem('syllobus_learning_profile',JSON.stringify(p)); };
     const [saveConsent, setSaveConsent] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
     const [busy, setBusy] = useState(false);
     const [pendingGrades, setPendingGrades] = useState<Grade[] | null>(null);
     useEffect(() => { if (pendingGrades) reviewRef.current?.scrollIntoView({ block: 'start' }); }, [pendingGrades]);
     const [analysisData, setAnalysisData] = useState<AnalysisResult | null>(() => {
-        if (demo) return buildAnalysisResult(DEMO_GRADES, "経済学部");
+        if (demo) return buildAnalysisResult(DEMO_GRADES, "経済学部", {kind:"credit-status",warnings:[]});
         if (typeof window === "undefined") return null;
         const raw = localStorage.getItem('handai_analysis_data');
         try { return raw ? JSON.parse(raw) as AnalysisResult : null; } catch { return null; }
@@ -70,8 +81,22 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
         // Loading indicator synchronizes with the restoration request.
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setRestoring(true);
-        fetch(`/api/session-info?session_id=${sessionId}`)
-            .then(r => r.json())
+        (async () => {
+            const creditResponse = await fetch(`/api/credit-records?session_id=${sessionId}`);
+            if (creditResponse.ok) {
+                const {snapshot}=await creditResponse.json();
+                if(snapshot && !inputStarted.current) {
+                    if(validProfile(snapshot.profile)) { setProfile(snapshot.profile); localStorage.setItem('syllobus_learning_profile',JSON.stringify(snapshot.profile)); }
+                    const info: NonNullable<AnalysisResult['importInfo']>={kind:'credit-status',warnings:[]};
+                    const result=buildAnalysisResult(snapshot.grades,snapshot.faculty,info);
+                    setAnalysisData(result);setFaculty(snapshot.faculty);setImportInfo(info);
+                    localStorage.setItem('handai_analysis_data',JSON.stringify(result));
+                    localStorage.setItem('handai_faculty',snapshot.faculty);
+                    return {hasSubmission:false};
+                }
+            }
+            return fetch(`/api/session-info?session_id=${sessionId}`).then(r=>r.json());
+        })()
             .then(({ hasSubmission, grades: savedGrades, faculty: savedFaculty }: {
                 hasSubmission: boolean;
                 grades?: Grade[];
@@ -96,7 +121,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
 
     const handleConfirm = async (confirmedGrades: Grade[]) => {
         if (demo) return;
-        const result = buildAnalysisResult(confirmedGrades, faculty);
+        const result = buildAnalysisResult(confirmedGrades, faculty, importInfo);
         setAnalysisData(result);
         setPendingGrades(null);
         localStorage.setItem('handai_analysis_data', JSON.stringify(result));
@@ -110,9 +135,10 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
         if (!sessionId) { setSaveMessage('保存機能に接続できません。成績はこのブラウザのみに保存しました。'); return; }
         setBusy(true);
         try {
-            const response = await fetch('/api/save-grades', {
+            const isCredit = grades.every(g=>g.categorySource==='university-csv');
+            const response = await fetch(isCredit ? '/api/credit-records' : '/api/save-grades', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: sessionId, faculty, grades, consent: true }),
+                body: JSON.stringify({ session_id: sessionId, faculty, grades, profile, consent: true }),
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error);
@@ -127,7 +153,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
         if (demo || !window.confirm('サーバーとこのブラウザの成績データを削除しますか？')) return;
         setBusy(true);
         try {
-            const r = await fetch(`/api/save-grades?session_id=${sessionId}`, { method: 'DELETE' });
+            const r = await fetch(`${analysisData?.importInfo ? '/api/credit-records' : '/api/save-grades'}?session_id=${sessionId}`, { method: 'DELETE' });
             const data = await r.json();
             if (!r.ok) throw new Error(data.error);
             handleReset();
@@ -142,6 +168,8 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
         if (demo) { window.location.href = '/dashboard'; return; }
         localStorage.removeItem('handai_analysis_data');
         localStorage.removeItem('handai_faculty');
+        localStorage.removeItem('syllobus_learning_profile');
+        setProfile(EMPTY_PROFILE);
         setAnalysisData(null);
         setPendingGrades(null);
         setReviewWarning('');
@@ -157,10 +185,11 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
                     </button>
                 </div>
                 <label className="flex items-start gap-2 rounded border p-3 text-sm"><input type="checkbox" checked={saveConsent} onChange={e => setSaveConsent(e.target.checked)} />
-                    <span>確認した成績・学部・GPAをSupabaseに保存し、復元と統計に利用することに同意します（任意）。未選択ならこのブラウザ内のみに保存します。<Link href="/about" className="underline">保存・削除の説明</Link></span>
+                    <span>確認した成績・大学の区分・修得学期・学部と入力した比較条件をSupabaseに保存し、復元と統計に利用することに同意します（任意）。未選択ならこのブラウザ内のみに保存します。<Link href="/about" className="underline">保存・削除の説明</Link></span>
                 </label>
                 {reviewWarning && <p role="alert" className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">{reviewWarning}</p>}
-                <GradeReview initialGrades={pendingGrades} onConfirm={handleConfirm} />
+                {pendingGrades.every(g=>g.categorySource==='university-csv') && <LearningProfileEditor grades={pendingGrades} value={profile} onChange={changeProfile}/>}
+                <GradeReview initialGrades={pendingGrades} onConfirm={handleConfirm} onEdited={() => changeProfile({...profile, complete:false})} />
             </div>
         );
     }
@@ -175,7 +204,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
                 participantCount={participantCount}
                 faculty={faculty}
                 onFacultyChange={setFaculty}
-                onGradesParsed={(grades, warning) => { inputStarted.current = true; setReviewWarning(warning ?? ''); setPendingGrades(grades); }}
+                onGradesParsed={(grades, warning, info) => { setImportInfo(info); setProfile(p=>({...p,complete:false})); inputStarted.current = true; setReviewWarning(warning ?? ''); setPendingGrades(grades); }}
             />
             </div>
         );
@@ -188,9 +217,11 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
 
     return (
         <div className="space-y-5">
-            {demo && <div className="rounded border border-blue-300 bg-blue-50 p-4 text-sm text-blue-950">デモモード：架空の経済学部生の成績です。サーバーへの送信・保存や実際の学生との比較は行いません。</div>}
+            {demo && <div className="rounded border border-blue-300 bg-blue-50 p-4 text-sm text-blue-950">デモモード：単位修得CSVの形式を再現した、架空の経済学部生の成績です。サーバーへの送信・保存や実際の学生との比較は行いません。</div>}
+            {!demo && <label className="block text-sm">学部 <select className="rounded border p-2" value={faculty} onChange={e=>{setFaculty(e.target.value as Faculty);localStorage.setItem('handai_faculty',e.target.value);}}><option value="">選択してください</option>{FACULTY_OPTIONS.map(f=><option key={f}>{f}</option>)}</select></label>}
             {!demo && <div className="space-y-2 text-sm"><p role="status">{saveMessage}</p><div className="flex flex-wrap gap-2">
-                {saveConsent && <Button disabled={busy} variant="outline" onClick={() => saveGrades(analysisData.grades)}>サーバー保存を再試行</Button>}
+                <label className="flex gap-2"><input type="checkbox" checked={saveConsent} onChange={e=>setSaveConsent(e.target.checked)}/>成績・区分・比較条件の共有保存に同意する（任意）</label>
+                {saveConsent && <Button disabled={busy} variant="outline" onClick={() => saveGrades(analysisData.grades)}>確認した内容を共有保存</Button>}
                 <Button disabled={busy} variant="outline" onClick={deleteGrades}>サーバー・端末の成績を削除</Button>
             </div></div>}
             {staleData && (
@@ -216,7 +247,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
                 </Button>
             </div>
 
-            {!demo && <GpaDeviationCard
+            {!demo && !analysisData.importInfo && <GpaDeviationCard
                 analysisData={analysisData}
                 stats={stats}
                 deviation={deviation}
@@ -224,9 +255,11 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
             />}
 
             {demo && <details className="rounded border p-3"><summary>サンプル成績一覧（架空）</summary><ul className="mt-3 space-y-2 text-sm">{analysisData.grades.map(g => <li key={g.subject}>{g.subject}：{g.grade}／{g.credits}単位／{g.year}年度</li>)}</ul></details>}
+            {analysisData.importInfo && !demo && <p className="rounded border bg-card p-4 text-sm">大学CSV記載の通算GPA：{analysisData.importInfo.officialGpa ?? '記載なし'}。以下のGPAは取込明細のみの参考計算です。不合格・再履修等の扱いにより大学の通算GPAと一致しない場合があります。</p>}
+            {(analysisData.importInfo || demo) && <><LearningProfileEditor grades={analysisData.grades} value={profile} onChange={changeProfile}/><LearningInsights grades={analysisData.grades} faculty={faculty} profile={profile} demo={demo}/></>}
             <StatsPanel
                 analysisData={analysisData}
-                stats={demo ? null : stats}
+                stats={demo || analysisData.importInfo ? null : stats}
                 faculty={faculty}
             />
         </div>

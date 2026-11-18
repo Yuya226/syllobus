@@ -40,7 +40,7 @@ export default function Home() {
                                 から始める。
                             </h1>
                             <p className="max-w-2xl text-base text-muted-foreground md:text-lg leading-relaxed">
-                                KOANのスクショまたはCSVをアップロードすると、GPA偏差値、科目別の成績分布、卒業要件の進捗をひとつの画面で確認できます。
+                                KOANの単位修得状況CSVから、大学の分類に基づく修得単位・学期別推移・卒業要件の進捗を確認できます。成績の共有は任意です。
                             </p>
                             <div className="flex flex-col sm:flex-row gap-3">
                                 <Button asChild size="lg" className="text-base">
@@ -100,7 +100,7 @@ export default function Home() {
                             <BarChart3 className="mb-3 h-5 w-5 text-primary" />
                             <h3 className="text-sm font-bold">GPAと評価分布</h3>
                             <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                                自分のGPA、評価数、全体平均との差をすばやく確認できます。
+                                取込明細の参考GPAと評価数を確認できます。共有比較は十分なデータがある科目だけ表示します。
                             </p>
                         </div>
                         <div className="rounded-md border bg-card p-5 shadow-sm">

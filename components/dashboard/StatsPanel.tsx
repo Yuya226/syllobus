@@ -112,11 +112,11 @@ export default function StatsPanel({ analysisData, stats, faculty }: Props) {
                 <div className="grid gap-4 grid-cols-2">
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium">通算GPA</CardTitle>
+                            <CardTitle className="text-sm font-medium">{analysisData.importInfo ? '取込明細の参考GPA' : '通算GPA'}</CardTitle>
                             <TrendingUp className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{analysisData.gpa.cumulative}</div>
+                            <div className="text-2xl font-bold">{analysisData.grades.some(g=>g.grade && ['S','A','B','C','F'].includes(g.grade)) ? analysisData.gpa.cumulative : '対象評語なし'}</div>
                             <p className="text-xs text-muted-foreground">解析データより</p>
                         </CardContent>
                     </Card>
