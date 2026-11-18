@@ -34,6 +34,11 @@ export async function DELETE(req: NextRequest) {
     const id = req.nextUrl.searchParams.get('session_id');
     if (!ownsSession(req, id)) return NextResponse.json({ error: '削除権限を確認できません。' }, { status: 403 });
     try {
+        if (process.env.DATABASE_PROVIDER === 'd1') {
+            const {error} = await getSupabaseAdmin().rpc('delete_session_records', {target_session:id});
+            if (error) throw new Error('DB delete failed');
+            return NextResponse.json({ok:true});
+        }
         const creditDelete = await getSupabaseAdmin().from('credit_snapshots').delete().eq('session_id', id);
         if (creditDelete.error && !['42P01', 'PGRST205'].includes(creditDelete.error.code)) throw new Error('Credit snapshot delete failed');
         const { error } = await getSupabaseAdmin().from('grade_submissions').delete().eq('session_id', id);

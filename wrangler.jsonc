@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "syllobus",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-18",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {"directory": ".open-next/assets", "binding": "ASSETS"},
+  "services": [{"binding":"WORKER_SELF_REFERENCE","service":"syllobus"}],
+  "vars": {"DATABASE_PROVIDER":"d1","PARSER_VERSION":"1"},
+  "d1_databases": [{"binding":"DB","database_name":"syllobus","database_id":"d24096ab-6351-4ea8-8219-e65d396c310e","migrations_dir":"d1/migrations"}],
+  "observability": {"enabled":true,"head_sampling_rate":0.1}
+}

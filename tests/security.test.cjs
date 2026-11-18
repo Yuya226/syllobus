@@ -102,7 +102,7 @@ test('malformed JSON does not bypass authentication',async()=>{
     assert.equal((await save.POST(request)).status,403);
 });
 let annotations = [];
-require.cache[require.resolve('@google-cloud/vision')] = { exports: { ImageAnnotatorClient: class { async textDetection() { return [{textAnnotations: annotations}]; } } } };
+require.cache[require.resolve('../lib/vision.ts')] = { exports: { detectText: async () => ({textAnnotations: annotations}) } };
 require.cache[require.resolve('../lib/subjects.ts')] = { exports: { validateAndEnrichGrades: async grades => grades } };
 const analyze = require('../app/api/analyze/route.ts');
 function imageRequest(bytes, type) {

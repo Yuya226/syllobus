@@ -34,3 +34,7 @@ Thumbs.db
 grade-analysis-app-ae23927e8c30.json
 google-cloud-key.json
 grade-analysis-app-352b52c19617.json
+
+.open-next/
+.wrangler/
+.dev.vars*

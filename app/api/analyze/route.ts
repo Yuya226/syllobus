@@ -1,16 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ImageAnnotatorClient, protos } from '@google-cloud/vision';
-
-type IEntityAnnotation = protos.google.cloud.vision.v1.IEntityAnnotation;
-
-// Initialize Google Cloud Vision Client
-const client = new ImageAnnotatorClient({
-    credentials: {
-        client_email: process.env.GOOGLE_CLIENT_EMAIL,
-        private_key: (process.env.GOOGLE_PRIVATE_KEY || '').replace(/\\n/g, '\n').replace(/"/g, ''),
-        project_id: process.env.GOOGLE_PROJECT_ID,
-    },
-});
+import { detectText, type VisionAnnotation as IEntityAnnotation } from '@/lib/vision';
 
 interface ParsedLine {
     words: { text: string, x: number, y: number, width: number }[];
@@ -338,7 +327,7 @@ export async function POST(req: NextRequest) {
         let parsedGrades: Grade[] = [];
 
         // --- IMAGE OCR PARSING ROUTE ---
-        const [result] = await client.textDetection(buffer);
+        const result = await detectText(buffer);
         const detections = result.textAnnotations;
 
         if (!detections || detections.length === 0) {

@@ -1,10 +1,12 @@
+import { getD1Client } from './d1';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 declare global {
     var _supabaseAdmin: SupabaseClient | undefined;
 }
 
-export function getSupabaseAdmin(): SupabaseClient {
+export function getSupabaseAdmin() {
+    if (process.env.DATABASE_PROVIDER === "d1") return getD1Client();
     if (!globalThis._supabaseAdmin) {
         const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
         const key = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? '').replace(/^"|"$/g, '') || undefined;

@@ -1,0 +1,41 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const Module = require('node:module');
+const { getPlatformProxy } = require('wrangler');
+(async () => {
+ const platform = await getPlatformProxy({configPath:'wrangler.jsonc',persist:false});
+ try {
+  const db=platform.env.DB;
+  for(const statement of fs.readFileSync('d1/migrations/0001_initial.sql','utf8').split(';').filter(s=>s.trim()))await db.prepare(statement).run();
+  const original=Module._load;
+  Module._load=function(name,...args){if(name==='@opennextjs/cloudflare')return {getCloudflareContext:async()=>({env:{DB:db}})};return original.call(this,name,...args)};
+  const {getD1Client}=require('../lib/d1.ts');
+  const {checkRateLimit}=require('../lib/ratelimit.ts');
+  Module._load=original;
+  const client=getD1Client();
+  const id='00000000-0000-4000-8000-000000000001';
+  const payload={faculty:'経済学部',grades:[{subject:'架空のテスト科目',credits:2,year:2025,semester:'春学期',grade:'A',category:'選択',categorySource:'university-csv',passed:true}],profile:{department:'',admissionYear:null,yearLevels:{},completedYear:null,completedTerm:'',complete:false}};
+  assert.equal((await client.rpc('replace_credit_snapshot',{target_session:id,payload})).error,null);
+  assert.deepEqual((await client.from('credit_snapshots').select('faculty,grades,profile').eq('session_id',id).maybeSingle()).data.grades,payload.grades);
+  assert.equal((await client.from('credit_snapshots').select('grades').eq('session_id','other').maybeSingle()).data,null);
+  const row={session_id:id,faculty:'経済学部',subject_name:'架空の旧形式',course_code:null,grade:'A',credits:2,year:2025,session_gpa:3,parser_version:1};
+  assert.ok((await client.rpc('replace_session_grades',{target_session:id,new_rows:[{...row,credits:-1}]})).error);
+  assert.ok((await client.from('credit_snapshots').select('grades').eq('session_id',id).maybeSingle()).data,'failed batch must preserve previous snapshot');
+  assert.equal((await client.rpc('replace_session_grades',{target_session:id,new_rows:[row]})).error,null);
+  assert.equal((await client.from('credit_snapshots').select('grades').eq('session_id',id).maybeSingle()).data,null);
+  const stats=await client.rpc('get_aggregate_stats',{});assert.equal(stats.error,null);assert.equal(stats.data.totalParticipants,1);assert.deepEqual(stats.data.hardCourses,[]);
+  assert.equal((await client.from('grade_submissions').select('subject_name').in('subject_name',["' OR 1=1 --"])).data.length,0);
+  assert.equal((await client.rpc('replace_credit_snapshot',{target_session:id,payload})).error,null);
+  assert.equal((await client.from('grade_submissions').select('subject_name').eq('session_id',id)).data.length,0);
+  assert.equal((await client.rpc('delete_session_records',{target_session:id})).error,null);
+  assert.equal((await client.from('credit_snapshots').select('session_id')).data.length,0);
+  for(const statement of fs.readFileSync('d1/migrations/0002_rate_limits.sql','utf8').split(';').filter(s=>s.trim()))await db.prepare(statement).run();
+  process.env.DATABASE_PROVIDER='d1';process.env.WRITE_TOKEN_SECRET='integration-only-secret-never-deploy';
+  const attempts=await Promise.all(Array.from({length:12},()=>checkRateLimit(new Request('https://example.com',{headers:{'cf-connecting-ip':'192.0.2.1'}}))));
+  assert.equal(attempts.filter(r=>r===null).length,10);assert.equal(attempts.filter(r=>r?.status===429).length,2);
+  assert.equal(await checkRateLimit(new Request('https://example.com',{headers:{'cf-connecting-ip':'192.0.2.2'}})),null);
+  const buckets=await db.prepare('SELECT bucket FROM rate_limits').all();assert.ok(buckets.results.every(r=>/^[a-f0-9]{64}$/.test(r.bucket)));
+  console.log('D1 rate limiter passed: concurrent limit, IP separation, HMAC-only storage');
+  console.log('D1 integration passed: save, restore, isolation, SQL parameters, atomic rollback, replacement, deletion');
+ }finally{await platform.dispose()}
+})().catch(e=>{console.error(e);process.exitCode=1});

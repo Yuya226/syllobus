@@ -72,10 +72,10 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
         if (typeof window === "undefined") return '';
         return (localStorage.getItem('handai_faculty') as Faculty | null) ?? '';
     });
-    // localStorage にデータがなく session_id がある場合、Supabase から復元が必要な可能性がある
+    // localStorage にデータがなく session_id がある場合、Cloudflare D1 から復元が必要な可能性がある
     const [restoring, setRestoring] = useState(false);
 
-    // localStorage が空でも session_id が Supabase にあれば成績を復元する
+    // localStorage が空でも session_id が Cloudflare D1 にあれば成績を復元する
     useEffect(() => {
         if (demo || analysisData !== null || !sessionId) return;
         // Loading indicator synchronizes with the restoration request.
@@ -185,7 +185,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
                     </button>
                 </div>
                 <label className="flex items-start gap-2 rounded border p-3 text-sm"><input type="checkbox" checked={saveConsent} onChange={e => setSaveConsent(e.target.checked)} />
-                    <span>確認した成績・大学の区分・修得学期・学部と入力した比較条件をSupabaseに保存し、復元と統計に利用することに同意します（任意）。未選択ならこのブラウザ内のみに保存します。<Link href="/about" className="underline">保存・削除の説明</Link></span>
+                    <span>確認した成績・大学の区分・修得学期・学部と入力した比較条件をCloudflare D1に保存し、復元と統計に利用することに同意します（任意）。未選択ならこのブラウザ内のみに保存します。<Link href="/about" className="underline">保存・削除の説明</Link></span>
                 </label>
                 {reviewWarning && <p role="alert" className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">{reviewWarning}</p>}
                 {pendingGrades.every(g=>g.categorySource==='university-csv') && <LearningProfileEditor grades={pendingGrades} value={profile} onChange={changeProfile}/>}

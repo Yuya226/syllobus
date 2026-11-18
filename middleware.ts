@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // In-memory sliding-window rate limiter (per Edge instance)
-// Adequate for Vercel edge functions which are long-lived per region
+// Best-effort only; writes also use the persistent Upstash rate limiter.
 const buckets = new Map<string, number[]>();
 
 function isRateLimited(key: string, limit: number, windowMs: number): boolean {
@@ -21,7 +21,7 @@ function isRateLimited(key: string, limit: number, windowMs: number): boolean {
 }
 
 function getIp(req: NextRequest): string {
-    return req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
+    return req.headers.get('cf-connecting-ip') ?? req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
 }
 
 export function middleware(req: NextRequest) {
