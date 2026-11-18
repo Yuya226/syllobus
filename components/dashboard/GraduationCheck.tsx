@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import type { Grade, Faculty } from "@/lib/types";
 import {
     calcProgress, gradeKey,
-    FACULTY_DEFS,
+    getGraduationReference,
     type CategoryProgress, type GradCategory, type FacultyGroupDef,
 } from "@/lib/requirements";
 
@@ -262,11 +262,12 @@ function ManualCheckBanner({ cats }: { cats: GradCategory[] }) {
 }
 
 // ── メインコンポーネント ──────────────────────────────────────────────────────
-function GraduationDetails({ grades, faculty }: { grades: Grade[]; faculty: Faculty | '' }) {
+function GraduationDetails({ grades, faculty, admissionYear }: { grades: Grade[]; faculty: Faculty | ''; admissionYear: number }) {
     const [overrides, setOverrides] = useState<Record<string, string>>({});
     const [openCats, setOpenCats] = useState<Set<string>>(new Set());
 
-    const def = faculty ? (FACULTY_DEFS[faculty] ?? null) : null;
+    const reference = getGraduationReference(faculty, admissionYear);
+    const def = reference?.def;
 
     const toggle = (id: string) =>
         setOpenCats(prev => {
@@ -325,7 +326,7 @@ function GraduationDetails({ grades, faculty }: { grades: Grade[]; faculty: Facu
                     卒業要件チェック
                 </CardTitle>
                 <CardDescription>
-                    {faculty}（2025年度資料による参考表示
+                    {faculty}（{reference?.label}
                     {def.totalRequired ? `・総 ${def.totalRequired} 単位` : '・A・B 群'}）
                 </CardDescription>
             </CardHeader>
@@ -403,8 +404,8 @@ function GraduationDetails({ grades, faculty }: { grades: Grade[]; faculty: Facu
                 <ManualCheckBanner cats={allCategories} />
 
                 <p className="text-[10px] text-muted-foreground leading-relaxed">
-                    ※ 2025年度資料による参考表示の要件です。詳細は各学部の学生便覧でご確認ください。
-                    出典: <a href="https://www.celas.osaka-u.ac.jp/education/prerequisite/" target="_blank" rel="noopener noreferrer" className="underline">CELAS 卒業要件単位数</a>
+                    ※ {reference?.label}です。詳細は入学年度に対応する学生便覧でご確認ください。
+                    出典: <a href={reference?.source} target="_blank" rel="noopener noreferrer" className="underline">大学公式の卒業要件資料</a>
                 </p>
             </CardContent>
         </Card>
@@ -414,15 +415,16 @@ function GraduationDetails({ grades, faculty }: { grades: Grade[]; faculty: Facu
 
 export default function GraduationCheck({ grades, faculty }: { grades: Grade[]; faculty: Faculty | '' }) {
     const [year, setYear] = useState('');
+    const reference = getGraduationReference(faculty, Number(year));
     const uncertain = ['外国語学部', '薬学部', '基礎工学部'].includes(faculty);
     return <div className="space-y-3">
         <div className="rounded border bg-card p-4 text-sm space-y-3">
             <h3 className="font-bold">卒業要件の対応範囲</h3>
             <p>経済学部：専門科目・自由選択を含む参考計算。文学部・人間科学部・法学部・理学部・歯学部・工学部・医学部・保健学科：共通教育のみ。外国語学部・薬学部・基礎工学部：未確認・推定を含むため判定停止中。</p>
-            <p>既存実装は2025年度資料が基準です。2024年度以前・2026年度以降の入学生への適用は未検証です。科目分類・単位数には推定が含まれ、卒業可否は判定できません。</p>
-            <label className="block">入学年度 <select value={year} onChange={e => setYear(e.target.value)} className="rounded border bg-background p-2"><option value="">選択してください</option><option value="older">2024年度以前（未検証）</option><option value="2025">2025年度（参考計算）</option><option value="newer">2026年度以降（未検証）</option></select></label>
+            <p>経済学部は2019〜2024年度入学者用の公式確認表と必要単位数を照合済みで、2025年度とともに参考計算を表示します。他学部は2025年度資料が基準です。科目の読替・指定科目・外国語の内訳は別途確認が必要で、卒業可否は判定できません。</p>
+            <label className="block">入学年度 <select value={year} onChange={e => setYear(e.target.value)} className="rounded border bg-background p-2"><option value="">選択してください</option><option value="older">2018年度以前（未検証）</option>{[2019, 2020, 2021, 2022, 2023, 2024].map(y => <option key={y} value={y}>{y}年度{faculty === '経済学部' ? '（参考計算）' : '（未検証）'}</option>)}<option value="2025">2025年度（参考計算）</option><option value="newer">2026年度以降（未検証）</option></select></label>
             <p>最終的な卒業要件は、入学年度・学科に対応する大学公式の学生便覧で確認してください。<a href="https://www.celas.osaka-u.ac.jp/education/prerequisite/" target="_blank" rel="noopener noreferrer" className="underline">大学公式・共通教育要件</a></p>
         </div>
-        {year === '2025' && !uncertain ? <GraduationDetails grades={grades} faculty={faculty} /> : <p className="rounded border p-4 text-sm">{uncertain ? 'この学部は未確認・推定の要件があるため、自動判定を表示していません。' : year ? 'この入学年度の要件は未検証のため、自動判定を表示していません。' : '入学年度を選択すると対応状況を確認できます。'}</p>}
+        {reference && !uncertain ? <GraduationDetails key={`${faculty}-${year}`} grades={grades} faculty={faculty} admissionYear={Number(year)} /> : <p className="rounded border p-4 text-sm">{uncertain ? 'この学部は未確認・推定の要件があるため、自動判定を表示していません。' : year ? 'この入学年度の要件は未検証のため、自動判定を表示していません。' : '入学年度を選択すると対応状況を確認できます。'}</p>}
     </div>;
 }

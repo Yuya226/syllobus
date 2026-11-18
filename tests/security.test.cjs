@@ -135,3 +135,17 @@ test('same-origin accepts the incoming Host when Next normalizes its internal UR
     const foreign=new NextRequest('http://localhost:3100/api/session',{headers:{host:'127.0.0.1:3100',origin:'https://attacker.test'}});
     assert.equal(auth.sameOrigin(foreign),false);
 });
+test('2024 economics admission retains reference calculation with cohort-specific source and checks',()=>{
+    const {getGraduationReference}=require('../lib/requirements.ts');
+    for(const year of [2019,2020,2021,2022,2023,2024]) {
+        const reference=getGraduationReference('経済学部',year);
+        assert.ok(reference); assert.equal(reference.def.totalRequired,130);
+        assert.match(reference.source,/2019-2024/);
+        assert.deepEqual(reference.def.groups.map(g=>g.categories.reduce((n,c)=>n+c.minCredits,0)),[18,18,72,22]);
+        assert.equal(reference.def.groups.flatMap(g=>g.categories).find(c=>c.id==='sports').manualCheck,true);
+    }
+    assert.ok(getGraduationReference('経済学部',2025));
+    assert.equal(getGraduationReference('経済学部',2018),null);
+    assert.equal(getGraduationReference('文学部',2024),null);
+    assert.equal(getGraduationReference('',2024),null);
+});

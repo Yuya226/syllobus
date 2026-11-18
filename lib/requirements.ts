@@ -60,7 +60,7 @@ export interface GraduationProgress {
 
 // ===== 定数 =====
 
-/** 経済学部 2025年度資料に基づく参考値（他年度への適用は未検証）の総卒業必要単位数 */
+/** 経済学部 2019〜2024年度・2025年度以降の公式確認表に基づく総卒業必要単位数 */
 export const TOTAL_REQUIRED_CREDITS = 130;
 
 // ===== ファクトリ関数 =====
@@ -538,4 +538,32 @@ export function calcProgress(
         byCategory,
         unclassified,
     };
+}
+
+
+/** Cohort-specific reference display; does not certify graduation eligibility. */
+export function getGraduationReference(faculty: Faculty | '', admissionYear: number) {
+    const def = faculty ? FACULTY_DEFS[faculty] : undefined;
+    if (!def || !Number.isInteger(admissionYear)) return null;
+    if (faculty === '経済学部' && admissionYear >= 2019 && admissionYear <= 2024) {
+        return {
+            label: '2019〜2024年度入学者・参考計算',
+            source: 'https://www.econ.osaka-u.ac.jp/wp-content/uploads/2025/03/sotsugyo-2019-2024.pdf',
+            def: {
+                ...def,
+                groups: def.groups.map(group => ({ ...group, categories: group.categories.map(category =>
+                    category.id === 'sports' ? { ...category, manualCheck: true, note: 'スポーツ実習Aの修得を公式確認表・成績証明書で確認してください。' } : category
+                ) })),
+                disclaimer: '公式の2019〜2024年度入学者用確認表と主要区分の必要単位数を照合しています。科目の読替・外国語の内訳・指定科目の修得は別途確認が必要です。科目分類は推定を含む参考値です。編入・転部の場合は適用される便覧を確認してください。',
+            },
+        };
+    }
+    if (admissionYear === 2025) return {
+        label: '2025年度資料による参考表示',
+        source: faculty === '経済学部'
+            ? 'https://www.econ.osaka-u.ac.jp/wp-content/uploads/2025/03/sotsugyo-2025-.pdf'
+            : 'https://www.celas.osaka-u.ac.jp/education/prerequisite/',
+        def,
+    };
+    return null;
 }
