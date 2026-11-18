@@ -287,7 +287,7 @@ const ECON_CATEGORY_TO_REQ: Record<string, string> = {
     // CELAS 共通教育科目
     '学問への扉':                          'gateway',
     '高度教養教育科目':                    'adv_lib',
-    'アドヴァンスト・セミナー':            'adv_lib',
+    'アドヴァンスト・セミナー':            'jiyu_elec',
     '情報教育科目':                        'info',
     '健康・スポーツ教育科目':              'sports',
     'マルチリンガル教育科目（英語）':      'english',
@@ -300,7 +300,7 @@ const ECON_CATEGORY_TO_REQ: Record<string, string> = {
     '選択必修１':                          'sel1',
     '選択必修２':                          'sel2',
     '選択科目':                            'spec_elec',
-    '選択科目（実践講義）':                'spec_elec',
+    '選択科目（実践講義）':                'jiyu_elec',
 };
 
 /**
@@ -461,7 +461,7 @@ function applyOverflow(
     // catchAll: 残り全カテゴリの超過分を集約
     if (rules.catchAll) {
         const catchCat = find(rules.catchAll);
-        let total = 0;
+        let total = catchCat.earned;
         for (const cp of byCategory) {
             if (cp.category.manualCheck) continue;
             if (cp.category.id === rules.catchAll) continue;
@@ -558,11 +558,15 @@ export function getGraduationReference(faculty: Faculty | '', admissionYear: num
             },
         };
     }
+    // The official 2026 handbook repeats the table for entrants from 2025 onward.
+    if (faculty === '経済学部' && admissionYear >= 2025) return {
+        label: '2025年度以降入学者・参考計算',
+        source: 'https://www.econ.osaka-u.ac.jp/wp-content/uploads/2025/03/sotsugyo-2025-.pdf',
+        def: { ...def, disclaimer: '2026年度学生便覧に掲載された「2025年度以降入学者用」の確認表に基づきます。教養18・国際性涵養18・専門基礎と専門教育72・自由選択22の計130単位です。科目分類・読替・指定科目・外国語の内訳は別途確認してください。将来の改訂や編入・転部の適用要件は大学公式資料を優先してください。' },
+    };
     if (admissionYear === 2025) return {
         label: '2025年度資料による参考表示',
-        source: faculty === '経済学部'
-            ? 'https://www.econ.osaka-u.ac.jp/wp-content/uploads/2025/03/sotsugyo-2025-.pdf'
-            : 'https://www.celas.osaka-u.ac.jp/education/prerequisite/',
+        source: 'https://www.celas.osaka-u.ac.jp/education/prerequisite/',
         def,
     };
     return null;

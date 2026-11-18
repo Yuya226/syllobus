@@ -149,3 +149,19 @@ test('2024 economics admission retains reference calculation with cohort-specifi
     assert.equal(getGraduationReference('文学部',2024),null);
     assert.equal(getGraduationReference('',2024),null);
 });
+
+test('economics entrants from 2025 use the published common requirements, without extending other faculties',()=>{
+    const {getGraduationReference,calcProgress}=require('../lib/requirements.ts');
+    for(const year of [2025,2026,2027]) {
+        const ref=getGraduationReference('経済学部',year);
+        assert.match(ref.label,/2025年度以降/);
+        assert.equal(ref.def.totalRequired,130);
+        assert.deepEqual(ref.def.groups.map(g=>g.categories.reduce((n,c)=>n+c.minCredits,0)),[18,18,72,22]);
+    }
+    assert.equal(getGraduationReference('文学部',2026),null);
+    const grades=['アドヴァンスト・セミナー','選択科目（実践講義）'].map((category,i)=>({subject:'Synthetic '+i,category,grade:'A',credits:2,year:2026,teacher:'',semester:null}));
+    const result=calcProgress(grades,getGraduationReference('経済学部',2026).def);
+    assert.equal(result.byCategory.find(c=>c.category.id==='jiyu_elec').earned,4);
+    assert.equal(result.byCategory.find(c=>c.category.id==='spec_elec').earned,0);
+    assert.equal(result.byCategory.find(c=>c.category.id==='adv_lib').courses.length,0);
+});
