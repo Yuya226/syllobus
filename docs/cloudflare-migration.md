@@ -31,13 +31,13 @@ Secretsは`GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_PROJECT_ID`, `WRI
 
 ## 独自ドメイン
 
-現状のsyllobus.comはVercel DNS (`ns1.vercel-dns.com`, `ns2.vercel-dns.com`)。Cloudflareアカウントに該当zoneなし。ドメイン管理側で既存DNSレコード（メール等も含む）を確認・引き継ぎ、Cloudflare zoneを作成して割り当てられたNSへ切替後、Workers Custom Domainとして接続する。架空のNS名やIPを設定しない。独自ドメインで保存・復元・削除を検証するまで旧Vercelを削除しない。
+現状のsyllobus.comはVercel DNS (`ns1.vercel-dns.com`, `ns2.vercel-dns.com`)。Cloudflare zone追加済み、状態pending。ドメイン管理側で既存DNSレコード（メール等も含む）を確認・引き継ぎ、割当NS `corey.ns.cloudflare.com` と `deb.ns.cloudflare.com` へお名前.comで切り替える。既存WebレコードとのCustom Domain競合を避け、`syllobus.com/*` のWorkers Routeを設定済み。Web用A/CNAMEはプロキシ済み（オレンジ雲）が必要。架空のNS名やIPを設定しない。独自ドメインで保存・復元・削除を検証するまで旧Vercelを削除しない。
 
 ## 依存監査
 
 OpenNext/ESLint等のglob関連推移依存にnpm audit警告が残る。互換範囲内の更新を実施したが、audit提案の古いOpenNextへの強制ダウングレードは適用しない。本サービスは利用者からglob式を受け取らない。今後の上流修正版で更新する。
 
-ドメイン購入先はお名前.com。Cloudflare OAuthでzone作成を試みたが403（zone.create権限なし）。管理画面でのzone追加と実際に割り当てられたNSの確認が必要。
+ドメイン購入先はお名前.com。Cloudflare OAuthはzone.create権限がなく、開発者が管理画面でzoneを追加済み。DNSレコードの読み取り権限も403のため、プロキシ状態は管理画面で確認が必要。ルート設定成功を確認済み。最終確認時、.com権威DNSはまだVercel NSを返した。
 
 ## 公開検証結果
 
