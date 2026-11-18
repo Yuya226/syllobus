@@ -1,5 +1,8 @@
 # GUILDデモ公開準備（2026-11-18）
 
+> 2026-11-19 再調査：以前のHEAD 401は確認処理がサービスキーの余分な引用符を除去していなかったため。アプリと同じ除去処理では認証できる。設定先 `cncgjzyozrfjslypneoo` はRESTスキーマ取得200だが、公開パスは `/` のみ。`subjects`・`grade_submissions`・`credit_snapshots` はすべて404（PGRST205）。テーブル不存在・別プロジェクト・公開スキーマ／権限設定の区別には管理側確認が必要で、空DBとは断定しない。本番はトップ200、stats 500、learning-stats 503、他セッションのcredit-records取得403。管理資格情報・DB接続情報は利用できず、SQL未適用。`node scripts/check-backend.mjs` で個人成績を取得せず再確認できる。
+
+
 > 追記：単位修得状況CSVへの移行後の仕様・検証・DB復旧条件は [最新設計](credit-status-design.md)、学部別の確認範囲は [公式資料調査](requirements-research.md) を参照。以下は初期調査の記録で、本番へのコードデプロイはその後実施済み。DB復旧・マイグレーション適用は未完了。
 
 ## 調査結果と優先順
