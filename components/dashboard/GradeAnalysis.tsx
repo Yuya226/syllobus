@@ -1,7 +1,7 @@
 "use client";
 
 import { DEMO_GRADES } from "@/lib/demo";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, ListChecks } from "lucide-react";
@@ -42,10 +42,14 @@ interface Props {
 }
 
 export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleData = false, demo = false }: Props) {
+    const inputStarted = useRef(false);
+    const reviewRef = useRef<HTMLDivElement>(null);
+    const [reviewWarning, setReviewWarning] = useState('');
     const [saveConsent, setSaveConsent] = useState(false);
     const [saveMessage, setSaveMessage] = useState('');
     const [busy, setBusy] = useState(false);
     const [pendingGrades, setPendingGrades] = useState<Grade[] | null>(null);
+    useEffect(() => { if (pendingGrades) reviewRef.current?.scrollIntoView({ block: 'start' }); }, [pendingGrades]);
     const [analysisData, setAnalysisData] = useState<AnalysisResult | null>(() => {
         if (demo) return buildAnalysisResult(DEMO_GRADES, "経済学部");
         if (typeof window === "undefined") return null;
@@ -73,7 +77,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
                 grades?: Grade[];
                 faculty?: string | null;
             }) => {
-                if (!hasSubmission || !savedGrades?.length) return;
+                if (inputStarted.current || !hasSubmission || !savedGrades?.length) return;
                 const result = buildAnalysisResult(savedGrades, (savedFaculty ?? '') as Faculty | '');
                 localStorage.setItem('handai_analysis_data', JSON.stringify(result));
                 if (savedFaculty) {
@@ -140,12 +144,13 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
         localStorage.removeItem('handai_faculty');
         setAnalysisData(null);
         setPendingGrades(null);
+        setReviewWarning('');
     };
 
     // ── Review View ───────────────────────────────────────────────────────────
     if (pendingGrades !== null) {
         return (
-            <div className="space-y-4">
+            <div ref={reviewRef} className="space-y-4">
                 <div className="flex justify-end">
                     <button onClick={handleReset} className="text-xs text-muted-foreground underline underline-offset-2">
                         やり直す
@@ -154,16 +159,8 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
                 <label className="flex items-start gap-2 rounded border p-3 text-sm"><input type="checkbox" checked={saveConsent} onChange={e => setSaveConsent(e.target.checked)} />
                     <span>確認した成績・学部・GPAをSupabaseに保存し、復元と統計に利用することに同意します（任意）。未選択ならこのブラウザ内のみに保存します。<Link href="/about" className="underline">保存・削除の説明</Link></span>
                 </label>
+                {reviewWarning && <p role="alert" className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">{reviewWarning}</p>}
                 <GradeReview initialGrades={pendingGrades} onConfirm={handleConfirm} />
-            </div>
-        );
-    }
-
-    // ── Restoring View ────────────────────────────────────────────────────────
-    if (restoring) {
-        return (
-            <div className="flex items-center justify-center py-24 text-sm text-muted-foreground">
-                データを復元中...
             </div>
         );
     }
@@ -171,13 +168,16 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
     // ── CTA View ──────────────────────────────────────────────────────────────
     if (analysisData === null) {
         return (
+            <div onPointerDownCapture={() => { inputStarted.current = true; }} onFocusCapture={() => { inputStarted.current = true; }}>
+            <p role="status" className="mb-3 text-sm text-muted-foreground">{restoring ? '保存済みデータを確認中です。新しいファイルも選択できます。' : ''}</p>
             <UploadPanel
                 stats={stats}
                 participantCount={participantCount}
                 faculty={faculty}
                 onFacultyChange={setFaculty}
-                onGradesParsed={setPendingGrades}
+                onGradesParsed={(grades, warning) => { inputStarted.current = true; setReviewWarning(warning ?? ''); setPendingGrades(grades); }}
             />
+            </div>
         );
     }
 

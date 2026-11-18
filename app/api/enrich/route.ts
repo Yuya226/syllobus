@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'grades array required' }, { status: 400 });
         }
 
-        const enriched = await validateAndEnrichGrades(body.grades);
+        const enriched = await validateAndEnrichGrades(body.grades, { requireLookup: true });
         const { cumulative, semesters, earnedCredits } = calculateGPA(enriched);
 
         const response: AnalysisResult = {

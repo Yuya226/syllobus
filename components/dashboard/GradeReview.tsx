@@ -49,7 +49,7 @@ export default function GradeReview({ initialGrades, onConfirm }: Props) {
         <div className="space-y-4">
             {/* ヘッダー */}
             <div>
-                <h2 className="text-base font-semibold">OCR結果を確認・修正</h2>
+                <h2 className="text-base font-semibold">読み取り結果を確認・修正</h2>
                 <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
                     <span>成績・単位数を確認し、誤りがあれば修正してから確定してください。</span>
                     <span className="inline-flex items-center gap-1">
@@ -64,7 +64,7 @@ export default function GradeReview({ initialGrades, onConfirm }: Props) {
             {/* 成績未検出の警告 */}
             {hasUnknown && (
                 <p className="text-xs text-rose-800 bg-rose-50 border border-rose-200 rounded px-2 py-1.5 leading-relaxed">
-                    ⚠ <span className="font-semibold">成績未入力の科目</span>があります（赤いセル）。OCRで成績が認識できませんでした。正しい成績を選択してから確定してください。
+                    ⚠ <span className="font-semibold">成績未入力の科目</span>があります（赤いセル）。成績を読み取れませんでした。正しい成績を選択してから確定してください。
                 </p>
             )}
             {/* OCR P誤認警告（カテゴリで確定した誤認がある場合のみ表示） */}

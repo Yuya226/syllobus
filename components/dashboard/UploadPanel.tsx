@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import UploadGuide from "./UploadGuide";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Upload, TrendingUp, Users, Flame, Lock } from "lucide-react";
 import type { AnalysisResult, AggregateStats, Faculty, Grade } from "@/lib/types";
 import { FACULTY_OPTIONS } from "@/lib/types";
+import { enrichForReview } from "@/lib/enrich-for-review";
 import { parseKoanCSV } from "@/lib/csv";
 
 function mergeGrades(allGrades: Grade[][]): Grade[] {
@@ -37,7 +38,7 @@ interface Props {
     participantCount: number | null;
     faculty: Faculty | '';
     onFacultyChange: (f: Faculty | '') => void;
-    onGradesParsed: (grades: Grade[]) => void;
+    onGradesParsed: (grades: Grade[], warning?: string) => void;
 }
 
 export default function UploadPanel({ participantCount, faculty, onFacultyChange, onGradesParsed }: Props) {
@@ -46,11 +47,14 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [uploadMode, setUploadMode] = useState<'image' | 'csv'>('image');
+    const errorRef = useRef<HTMLDivElement>(null);
+    useEffect(() => { if (uploadError) errorRef.current?.focus(); }, [uploadError]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const csvFileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files ?? []);
+        const input = e.currentTarget;
+        const files = Array.from(input.files ?? []);
         if (files.length === 0) return;
         if (!consent) return;
         setUploadError('');
@@ -81,12 +85,13 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
         } finally {
             clearInterval(progressInterval);
             setIsUploading(false);
-            e.target.value = '';
+            input.value = '';
         }
     };
 
     const handleCsvChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
+        const input = e.currentTarget;
+        const file = input.files?.[0];
         if (!file) return;
         if (!consent) return;
         setUploadError('');
@@ -101,24 +106,16 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
                 return;
             }
             setUploadProgress(50);
-            const response = await fetch('/api/enrich', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ grades: parsed }),
-            });
-            if (!response.ok) {
-                const err = await response.json().catch(() => ({}));
-                throw new Error(err.error || `Enrich failed: ${response.status}`);
-            }
-            const data: AnalysisResult = await response.json();
-            onGradesParsed(data.grades);
+            if (parsed.length > 500) throw new Error('一度に読み取れる成績は500件までです。');
+            const result = await enrichForReview(parsed);
+            onGradesParsed(result.grades, result.warning);
             setUploadProgress(100);
         } catch (error) {
             console.error('Error processing CSV:', error);
             setUploadError(error instanceof Error ? error.message : 'CSVを処理できませんでした。選び直してください。');
         } finally {
             setIsUploading(false);
-            e.target.value = '';
+            input.value = '';
         }
     };
 
@@ -223,7 +220,7 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
                 {isUploading ? (
                     <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">成績表を解析中...</span>
+                            <span className="text-muted-foreground" role="status">{uploadMode === 'csv' && uploadProgress >= 50 ? 'CSV読取済み。科目情報を照合中（最大8秒）...' : '成績表を読み取り中...'}</span>
                             <span className="font-medium">{uploadProgress}%</span>
                         </div>
                         <Progress value={uploadProgress} className="h-2" />
@@ -258,7 +255,7 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
 
                     <UploadGuide mode={uploadMode} />
                     <label className="flex items-start gap-2 text-sm leading-relaxed"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-1" /><span>解析のためのデータ送信に同意します。画像全体はGoogle Cloud Visionへ、CSVから抽出した成績は本サービスへ送られます。結果はこのブラウザに保存され、サーバー保存は確認画面で別途選べます。<Link href="/about" className="underline">詳細</Link></span></label>
-                    {uploadError && <div role="alert" className="rounded border border-red-300 p-3 text-sm text-red-700"><p>{uploadError}</p><a href="#upload-guide" className="underline">取得ガイドを確認</a><p>下のボタンからファイルを選び直せます。</p></div>}
+                    {uploadError && <div ref={errorRef} tabIndex={-1} role="alert" className="rounded border border-red-300 p-3 text-sm text-red-700"><p>{uploadError}</p><a href="#upload-guide" className="underline">取得ガイドを確認</a><p>下のボタンからファイルを選び直せます。</p></div>}
                     {uploadMode === 'image' ? (
                         <Button disabled={!consent} size="lg" className="w-full min-h-12 h-auto whitespace-normal text-base font-bold" onClick={() => fileInputRef.current?.click()}>
                             <Upload className="mr-2 h-5 w-5" />

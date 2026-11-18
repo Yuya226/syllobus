@@ -21,11 +21,10 @@ function isValidCode(code: string | null | undefined): code is string {
 /**
  * OCR で取得した grades を subjects テーブルと照合・補完する。
  *
- * - code のみでルックアップ（年度ミスマッチを防ぐ。category は年度間で同一）
- * - DB にない code → OCR データを INSERT（source='ocr'）
- * - DB にある code → name / credits / category を DB 値で上書き
+ * - (code, year) で照合。DBにない科目は入力値を維持（書き込みはしない）。
+ * - DB にある code → name / credits / category を DB 値で補完
  */
-export async function validateAndEnrichGrades(grades: Grade[]): Promise<Grade[]> {
+export async function validateAndEnrichGrades(grades: Grade[], { requireLookup = false }: { requireLookup?: boolean } = {}): Promise<Grade[]> {
     const supabase = getSupabaseAdmin();
 
     // 1. 有効なコードを収集
@@ -39,11 +38,12 @@ export async function validateAndEnrichGrades(grades: Grade[]): Promise<Grade[]>
     const exactMap = new Map<string, Subject>();
     const catMap   = new Map<string, string | null>();
     if (validCodes.length > 0) {
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from('subjects')
             .select('id, code, name, category, credits, teacher, semester, source, year')
             .in('code', validCodes);
 
+        if (error && requireLookup) throw new Error('Subject lookup unavailable');
         for (const row of data ?? []) {
             if (!isValidCode(row.code)) continue;
             exactMap.set(`${row.code}-${row.year ?? 'null'}`, row as Subject);
