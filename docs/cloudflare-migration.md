@@ -31,16 +31,25 @@ Secretsは`GOOGLE_CLIENT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_PROJECT_ID`, `WRI
 
 ## 独自ドメイン
 
-現状のsyllobus.comはVercel DNS (`ns1.vercel-dns.com`, `ns2.vercel-dns.com`)。Cloudflare zone追加済み、状態pending。ドメイン管理側で既存DNSレコード（メール等も含む）を確認・引き継ぎ、割当NS `corey.ns.cloudflare.com` と `deb.ns.cloudflare.com` へお名前.comで切り替える。既存WebレコードとのCustom Domain競合を避け、`syllobus.com/*` のWorkers Routeを設定済み。Web用A/CNAMEはプロキシ済み（オレンジ雲）が必要。架空のNS名やIPを設定しない。独自ドメインで保存・復元・削除を検証するまで旧Vercelを削除しない。
+syllobus.comのCloudflare zoneはactive。お名前.comのNS変更済みで、割当NSは `corey.ns.cloudflare.com` / `deb.ns.cloudflare.com`。公開DNSはCloudflareのプロキシIPを返し、`syllobus.com/*` Workers Routeを設定済み。TLSのホスト名検証を保ち、権威DNSで確認したCloudflare IPを指定して独自ドメインの保存・復元・削除・他セッション拒否を確認した。
+
+ローカルDNSキャッシュは一部旧Vercelを返し、通常名前解決での保存は503になる場合がある。反映中に再確認する際は、`scripts/smoke-cloudflare.mjs https://syllobus.com` を使用する。必要な場合のみ、その時点で権威DNSから確認したIPを `SYLLOBUS_TEST_RESOLVE_IP` に指定できる（TLS検証は無効にしない）。検証で使った架空データは削除済み。旧Vercelは削除していない。
 
 ## 依存監査
 
 OpenNext/ESLint等のglob関連推移依存にnpm audit警告が残る。互換範囲内の更新を実施したが、audit提案の古いOpenNextへの強制ダウングレードは適用しない。本サービスは利用者からglob式を受け取らない。今後の上流修正版で更新する。
 
-ドメイン購入先はお名前.com。Cloudflare OAuthはzone.create権限がなく、開発者が管理画面でzoneを追加済み。DNSレコードの読み取り権限も403のため、プロキシ状態は管理画面で確認が必要。ルート設定成功を確認済み。最終確認時、.com権威DNSはまだVercel NSを返した。
 
 ## 公開検証結果
 
 Cloudflare版: https://syllobus.rawle026.workers.dev 。30件の回帰テスト、D1実ランタイムの保存・原子的置換・ロールバック・削除・並列レート制限、Lint、OpenNextビルドを確認。公開APIでセッション作成→架空1件保存→復元→削除、別セッションのGET/POST/DELETE拒否、少数集計抑制を確認し、架空レコード削除済み。Google Visionへの白紙PNG送信で「文字なし」400、不正ファイル400を確認。実成績画像は送信していない。
 
-ネームサーバー未切替のためsyllobus.comはまだVercel版。過去のSupabaseデータもまだ移行していない。workers.devを試す場合は元CSVを再選択する。
+独自ドメインのCloudflare接続を確認済み。過去のSupabaseデータは未移行。workers.devと独自ドメインのブラウザ内データは別なので、必要な場合は元CSVを再選択する。
+
+## 旧データ復旧の準備
+
+`node scripts/export-legacy.mjs` は読み取り専用。先に3テーブルのアクセスを確認し、列を限定して全ページを取得、件数・主キー重複を確認し、2回目の全件取得とのハッシュ一致を検証する。成功時だけOS一時領域の専用ディレクトリ（0700、各ファイル0600）へバックアップと件数・SHA-256のmanifestを作る。ログに成績・セッションID・秘密鍵は出さない。
+
+2026-11-19実行ではsubjectsが404で停止。credit_snapshots / grade_submissionsも別途404、公開REST schemaのテーブル数0を確認。これは「旧データが空」の証明ではなく、復元・公開スキーマ・権限等の確認が必要な状態。既存データを削除・再作成していない。
+
+このスクリプトはD1へインポートしない。復旧後は旧保存を停止してエクスポートを実施し、実スキーマ・同意範囲・既存D1セッションとの競合を確認してからインポートする必要がある。D1で更新・削除されたデータを復活させない保護を含むインポート処理は、実データ構造確認後の残作業。エクスポートを公開ディレクトリやGitへ置かない。
