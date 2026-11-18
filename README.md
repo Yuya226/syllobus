@@ -12,8 +12,8 @@
 
 ## 使い方（ユーザー）
 
-1. KOANの「成績照会」画面をスクリーンショット撮影、またはCSVをエクスポート
-2. [Syllobus](https://handaigrade.vercel.app) にアクセスしてアップロード
+1. KOANの「成績」→「履修成績照会」で「過去を含めた全成績」を選択。「CSVに出力する」で保存、または「画面に表示する」で全授業を複数枚に分けて撮影（「単位修得状況照会」は対象外）
+2. [Syllobus](https://syllobus.com) にアクセスしてアップロード
 3. ダッシュボードでGPA・偏差値・成績分布を確認
 
 ## 開発セットアップ
@@ -38,8 +38,12 @@ GOOGLE_CLIENT_EMAIL=your-service-account@project.iam.gserviceaccount.com
 GOOGLE_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----\n"
 GOOGLE_PROJECT_ID=your-project-id
 
+# 必須（openssl rand -hex 32 等で生成。未設定・短い値は保存不可）
+WRITE_TOKEN_SECRET=十分ランダムな32文字以上の秘密
+UPSTASH_REDIS_REST_URL=https://your-redis-endpoint
+UPSTASH_REDIS_REST_TOKEN=your-redis-token
+
 # オプション
-WRITE_TOKEN_SECRET=任意のシークレット文字列   # save-grades APIの認証トークン（省略時: dev-secret-change-me）
 PARSER_VERSION=1                              # 古いキャッシュ検出用バージョン番号
 ```
 
@@ -71,7 +75,7 @@ npm run dev
 
 | カテゴリ | 技術 |
 |---|---|
-| フレームワーク | Next.js 15 (App Router) |
+| フレームワーク | Next.js 16 (App Router) |
 | 言語 | TypeScript |
 | スタイリング | Tailwind CSS / shadcn/ui |
 | データベース | Supabase (PostgreSQL) |
@@ -82,4 +86,17 @@ npm run dev
 
 - 本アプリは非公式です。大阪大学・KOANとは無関係です。
 - アップロードされたスクリーンショット・CSVはサーバーに保存されません。
-- 集計に使用するのはGPA値・学部・科目名のみです（匿名化済み）。
+- 保存に同意した場合、セッションID・学部・科目名・科目コード・評語・単位数・年度・GPA・解析バージョンをSupabaseに保存します。完全な匿名性は保証しません。詳細は運営についてをご確認ください。
+
+
+## デモ公開準備
+
+実成績を送信しないデモ: `/dashboard?demo=1`。
+復旧・マイグレーション・検証手順と残存課題は [docs/demo-readiness.md](docs/demo-readiness.md) を参照。
+新しい保存APIには `003_session_security.sql` の適用が必須です。
+
+```bash
+npm test
+npm run lint
+npm run build
+```

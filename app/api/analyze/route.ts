@@ -58,7 +58,7 @@ function reconstructLinesFromAnnotations(annotations: IEntityAnnotation[]): Pars
     const LINE_HEIGHT_TOLERANCE = 8;
 
     for (const word of words) {
-        let matchedLine = lines.find(line => Math.abs(line.avgY - word.y) < LINE_HEIGHT_TOLERANCE);
+        const matchedLine = lines.find(line => Math.abs(line.avgY - word.y) < LINE_HEIGHT_TOLERANCE);
 
         if (matchedLine) {
             matchedLine.words.push(word);
@@ -326,7 +326,14 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
         }
 
+        if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 4 * 1024 * 1024 || file.size === 0) {
+            return NextResponse.json({ error: '4MB以下のPNG・JPEG・WebP画像を選んでください。' }, { status: 400 });
+        }
         const buffer = Buffer.from(await file.arrayBuffer());
+        const validImage = (file.type === 'image/png' && buffer.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) ||
+            (file.type === 'image/jpeg' && buffer[0] === 255 && buffer[1] === 216 && buffer[2] === 255) ||
+            (file.type === 'image/webp' && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP');
+        if (!validImage) return NextResponse.json({ error: '画像形式を確認して選び直してください。' }, { status: 400 });
 
         let parsedGrades: Grade[] = [];
 
@@ -335,10 +342,11 @@ export async function POST(req: NextRequest) {
         const detections = result.textAnnotations;
 
         if (!detections || detections.length === 0) {
-            return NextResponse.json({ error: 'No text detected in image' }, { status: 400 });
+            return NextResponse.json({ error: '文字を読み取れませんでした。取得ガイドを確認して鮮明な画像を選び直してください。' }, { status: 400 });
         }
 
         parsedGrades = parseOCRText(detections);
+        if (!parsedGrades.length) return NextResponse.json({ error: '成績表を読み取れませんでした。「履修成績照会」で「画面に表示する」を押した一覧を選んでください。「単位修得状況照会」は対象外です。CSV出力も利用できます。' }, { status: 422 });
 
         // subjects テーブルと照合・補完（科目名・単位数の正規化）
         parsedGrades = await validateAndEnrichGrades(parsedGrades);
@@ -361,9 +369,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json(response);
 
-    } catch (error) {
-        console.error('Error processing upload:', error);
-        const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-        return NextResponse.json({ error: 'Internal Server Error', detail: msg }, { status: 500 });
+    } catch {
+        return NextResponse.json({ error: '画像の解析に失敗しました。時間をおいて再試行するかCSVをお試しください。' }, { status: 503 });
     }
 }

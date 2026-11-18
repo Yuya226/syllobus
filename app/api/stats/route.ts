@@ -8,7 +8,7 @@ let cachedStats: AggregateStats | null = null;
 let cacheTs = 0;
 const CACHE_TTL = 60_000; // 60 s
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 
 const EMPTY: AggregateStats = {
     totalParticipants: 0,
@@ -25,27 +25,8 @@ export async function GET(req: NextRequest) {
     const userGpa = parseFloat(searchParams.get('gpa') ?? 'NaN');
     const personalized = !isNaN(userGpa);
 
-    // パーソナライズ（gpa あり）のみ session_id 認証を要求する。
-    // 非パーソナライズ（参加者数・学部別GPAなど）は未アップロードユーザーにも公開する。
-    if (personalized) {
-        const sessionId = searchParams.get('session_id');
-        if (!sessionId || !UUID_RE.test(sessionId)) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const { count, error: authError } = await getSupabaseAdmin()
-            .from('grade_submissions')
-            .select('*', { count: 'exact', head: true })
-            .eq('session_id', sessionId);
-
-        if (authError) {
-            console.error('Supabase auth check error:', authError);
-            return NextResponse.json({ error: 'DB error' }, { status: 500 });
-        }
-        if (!count || count === 0) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-    }
+    // Arbitrary GPA percentile queries permit reconstructing individual GPAs.
+    if (personalized) return NextResponse.json({ error: '個別順位の公開は停止しています。' }, { status: 400 });
 
     // Return cached result for non-personalized requests when cache is warm.
     if (!personalized && cachedStats && Date.now() - cacheTs < CACHE_TTL) {
@@ -63,7 +44,12 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'DB error' }, { status: 500 });
     }
 
-    const stats: AggregateStats = data?.totalParticipants ? data : EMPTY;
+    const stats: AggregateStats = data?.totalParticipants >= 10 && data.stdDev > 0 ? {
+        ...data, userPercentile: null,
+        // Suppress all subgroup averages: complements can reveal suppressed students.
+        facultyBreakdown: {}, facultyGpaBreakdown: {},
+        hardCourses: (data.hardCourses ?? []).filter((c: { totalCount: number; failRate: number }) => c.totalCount >= 10 && c.failRate > 0 && c.failRate < 1),
+    } : { ...EMPTY, userPercentile: null };
 
     if (!personalized) {
         cachedStats = stats;

@@ -60,7 +60,7 @@ export interface GraduationProgress {
 
 // ===== 定数 =====
 
-/** 経済学部 2025年度以降入学者の総卒業必要単位数 */
+/** 経済学部 2025年度資料に基づく参考値（他年度への適用は未検証）の総卒業必要単位数 */
 export const TOTAL_REQUIRED_CREDITS = 130;
 
 // ===== ファクトリ関数 =====
@@ -529,7 +529,9 @@ export function calcProgress(
         applyOverflow(byCategory, def.overflowRules);
     }
 
-    const totalEarned = passed.reduce((sum, g) => sum + g.credits, 0);
+    const totalEarned = def.totalRequired != null
+        ? passed.reduce((sum, g) => sum + g.credits, 0)
+        : byCategory.reduce((sum, category) => sum + category.earned, 0);
     return {
         totalRequired: def.totalRequired ?? 0,
         totalEarned,

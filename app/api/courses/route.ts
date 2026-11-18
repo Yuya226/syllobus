@@ -25,7 +25,10 @@ export interface CoursesResponse {
     yearCounts: Record<number, number>;
 }
 
-const MIN_COUNT = 1;
+type SubjectRow = Omit<CourseResult, 'gradeDist' | 'totalCount'>;
+type GradeRow = { subject_name: string | null; course_code: string | null; year: number | null; grade: string | null; session_id: string };
+
+const MIN_COUNT = 10;
 
 /** (course_code, year) をキーに成績分布を集計する。course_code がない場合は subject_name にフォールバック */
 function buildDistMap(
@@ -50,6 +53,10 @@ function buildDistMap(
         entry.total++;
         map.set(key, entry);
     }
+    // Suppress small and homogeneous cohorts before sorting or pagination too.
+    for (const [key, d] of map) {
+        if (d.total < MIN_COUNT || Math.max(d.S, d.A, d.B, d.C, d.F, d.P) === d.total) map.delete(key);
+    }
     return map;
 }
 
@@ -64,7 +71,7 @@ function toGradeDist(d: GradeDist & { total: number }): GradeDist {
     };
 }
 
-function attachDist(subjects: any[], distMap: Map<string, GradeDist & { total: number }>): CourseResult[] {
+function attachDist(subjects: SubjectRow[], distMap: Map<string, GradeDist & { total: number }>): CourseResult[] {
     return subjects.map(s => {
         const d = (s.code ? distMap.get(`${s.code}-${s.year ?? ''}`) : null) ?? distMap.get(s.name);
         const hasData = d && d.total >= MIN_COUNT;
@@ -83,44 +90,44 @@ async function fetchGradeRowsForSubjects(
 ) {
     const codes = [...new Set(subjects.map(s => s.code).filter((c): c is string => !!c))];
     const names = [...new Set(subjects.map(s => s.name))];
-    const queries: Promise<{ data: any[] | null }>[] = [];
+    const queries: PromiseLike<{ data: GradeRow[] | null }>[] = [];
     if (codes.length > 0) {
         queries.push(
             supabase.from('grade_submissions')
                 .select('subject_name, course_code, year, grade, session_id')
-                .in('course_code', codes) as any
+                .in('course_code', codes)
         );
     }
     if (names.length > 0) {
         queries.push(
             supabase.from('grade_submissions')
                 .select('subject_name, course_code, year, grade, session_id')
-                .in('subject_name', names) as any
+                .in('subject_name', names)
         );
     }
     const results = await Promise.all(queries);
     return results.flatMap(r => r.data ?? []);
 }
 
-function distOf(s: any, distMap: Map<string, GradeDist & { total: number }>) {
+function distOf(s: SubjectRow, distMap: Map<string, GradeDist & { total: number }>) {
     return (s.code ? distMap.get(`${s.code}-${s.year ?? ''}`) : null) ?? distMap.get(s.name);
 }
 
-function saRate(s: any, distMap: Map<string, GradeDist & { total: number }>): number {
+function saRate(s: SubjectRow, distMap: Map<string, GradeDist & { total: number }>): number {
     const d = distOf(s, distMap);
     return d && d.total > 0 ? (d.S + d.A) / d.total : -1;
 }
 
-function failRate(s: any, distMap: Map<string, GradeDist & { total: number }>): number {
+function failRate(s: SubjectRow, distMap: Map<string, GradeDist & { total: number }>): number {
     const d = distOf(s, distMap);
     return d && d.total > 0 ? d.F / d.total : -1;
 }
 
-function sampleCount(s: any, distMap: Map<string, GradeDist & { total: number }>): number {
+function sampleCount(s: SubjectRow, distMap: Map<string, GradeDist & { total: number }>): number {
     return distOf(s, distMap)?.total ?? 0;
 }
 
-function applySort(subjects: any[], sort: string, distMap: Map<string, GradeDist & { total: number }>): any[] {
+function applySort(subjects: SubjectRow[], sort: string, distMap: Map<string, GradeDist & { total: number }>): SubjectRow[] {
     return [...subjects].sort((a, b) => {
         if (sort === 'year_desc')  return (b.year ?? 0) - (a.year ?? 0);
         if (sort === 'year_asc')   return (a.year ?? 0) - (b.year ?? 0);
@@ -141,7 +148,7 @@ export async function GET(req: NextRequest) {
     const sort = searchParams.get('sort') ?? 'sa_rate';
 
     const supabase = getSupabaseAdmin();
-    let allSubjects: any[];
+    let allSubjects: SubjectRow[];
     let distMap: Map<string, GradeDist & { total: number }>;
 
     if (q) {

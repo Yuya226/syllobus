@@ -1,105 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createHmac, timingSafeEqual } from 'crypto';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import type { SubmissionPayload } from '@/lib/types';
+import { ownsSession, sameOrigin } from '@/lib/session-auth';
+import { validGrades } from '@/lib/validate-grades';
+import { FACULTY_OPTIONS } from '@/lib/types';
+import { calculateGPA } from '@/lib/gpa';
 import { checkRateLimit } from '@/lib/ratelimit';
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const WRITE_COOKIE = 'swt'; // session write token
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
-
-function makeWriteToken(sessionId: string): string {
-    const secret = process.env.WRITE_TOKEN_SECRET ?? 'dev-secret-change-me';
-    return createHmac('sha256', secret).update(sessionId).digest('hex');
-}
-
-function verifyWriteToken(sessionId: string, token: string): boolean {
-    try {
-        const expected = Buffer.from(makeWriteToken(sessionId), 'hex');
-        const actual = Buffer.from(token, 'hex');
-        return expected.length === actual.length && timingSafeEqual(expected, actual);
-    } catch {
-        return false;
-    }
-}
-
 export async function POST(req: NextRequest) {
-    const rateLimitRes = await checkRateLimit(req);
-    if (rateLimitRes) return rateLimitRes;
-
-    let body: SubmissionPayload;
+    if (!sameOrigin(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const body = await req.json().catch(() => null);
+    if (!ownsSession(req, body?.session_id)) return NextResponse.json({ error: '保存権限を確認できません。ページを再読み込みしてください。' }, { status: 403 });
+    if (!validGrades(body.grades) || !['', ...FACULTY_OPTIONS].includes(body.faculty) || body.consent !== true) {
+        return NextResponse.json({ error: '成績と保存への同意を確認してください。' }, { status: 400 });
+    }
+    const limited = await checkRateLimit(req);
+    if (limited) return limited;
     try {
-        body = await req.json();
+        const gpa = calculateGPA(body.grades).cumulative;
+        const rows = body.grades.map((g: import('@/lib/types').Grade) => ({
+            session_id: body.session_id, faculty: body.faculty, subject_name: g.subject,
+            course_code: g.courseCode ?? null, grade: g.grade, credits: g.credits,
+            year: g.year, session_gpa: gpa, parser_version: Number(process.env.PARSER_VERSION ?? 1),
+        }));
+        const { error } = await getSupabaseAdmin().rpc('replace_session_grades', { target_session: body.session_id, new_rows: rows });
+        if (error) throw new Error('DB write failed');
+        return NextResponse.json({ ok: true });
     } catch {
-        return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+        return NextResponse.json({ error: '保存できませんでした。成績はこのブラウザに残っています。再試行してください。' }, { status: 503 });
     }
-
-    const { session_id, faculty, grades, session_gpa } = body;
-
-    if (!UUID_RE.test(session_id)) {
-        return NextResponse.json({ error: 'Invalid session_id' }, { status: 400 });
+}
+export async function DELETE(req: NextRequest) {
+    if (!sameOrigin(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const id = req.nextUrl.searchParams.get('session_id');
+    if (!ownsSession(req, id)) return NextResponse.json({ error: '削除権限を確認できません。' }, { status: 403 });
+    try {
+        const { error } = await getSupabaseAdmin().from('grade_submissions').delete().eq('session_id', id);
+        if (error) throw new Error('DB delete failed');
+        return NextResponse.json({ ok: true });
+    } catch {
+        return NextResponse.json({ error: 'サーバーから削除できませんでした。時間をおいて再試行してください。' }, { status: 503 });
     }
-    if (!grades?.length || session_gpa == null) {
-        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
-    if (grades.some(g => g.grade === null)) {
-        return NextResponse.json({ error: 'grades contain null grade' }, { status: 400 });
-    }
-
-    // Session ownership check:
-    // If the client has a write token cookie, it must match this session_id.
-    // This prevents overwriting another user's data even if their session_id leaks.
-    const existingToken = req.cookies.get(WRITE_COOKIE)?.value;
-    if (existingToken && !verifyWriteToken(session_id, existingToken)) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    const supabase = getSupabaseAdmin();
-
-    // 既存データを全削除してから入れ直す（再アップロード時の二重カウントを防ぐ）
-    const { error: deleteError } = await supabase
-        .from('grade_submissions')
-        .delete()
-        .eq('session_id', session_id);
-
-    if (deleteError) {
-        console.error('Supabase delete error:', deleteError);
-        return NextResponse.json({ error: 'DB error' }, { status: 500 });
-    }
-
-    const parserVersion = parseInt(process.env.PARSER_VERSION ?? '1');
-    const rows = grades.map((g) => ({
-        session_id,
-        faculty,
-        subject_name: g.subject,
-        course_code: g.courseCode ?? null,
-        grade: g.grade,
-        credits: g.credits,
-        year: g.year,
-        session_gpa,
-        parser_version: parserVersion,
-    }));
-
-    const { error } = await supabase
-        .from('grade_submissions')
-        .upsert(rows, { onConflict: 'session_id,subject_name,year,grade', ignoreDuplicates: true });
-
-    if (error) {
-        console.error('Supabase insert error:', error);
-        return NextResponse.json({ error: 'DB error' }, { status: 500 });
-    }
-
-    const res = NextResponse.json({ ok: true });
-
-    // Issue (or refresh) the write token cookie so only this browser can overwrite this session.
-    if (!existingToken) {
-        res.cookies.set(WRITE_COOKIE, makeWriteToken(session_id), {
-            httpOnly: true,
-            sameSite: 'strict',
-            maxAge: COOKIE_MAX_AGE,
-            path: '/',
-        });
-    }
-
-    return res;
 }

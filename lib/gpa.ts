@@ -28,7 +28,7 @@ export function calculateGPA(grades: Grade[]) {
         }
 
         const semKey = `${g.year} ${g.semester ?? '不明'}`;
-        if (!semesterPoints[semKey]) {
+        if (!(semKey in semesterPoints)) {
             semesterPoints[semKey] = 0;
             semesterCredits[semKey] = 0;
         }

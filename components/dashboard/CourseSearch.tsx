@@ -109,7 +109,7 @@ function CourseDetailModal({ course, onClose }: { course: CourseResult; onClose:
                                             <div className={`h-full ${color} transition-all`} style={{ width: `${rate * 100}%` }} />
                                         </div>
                                         <span className="w-16 text-right tabular-nums text-muted-foreground">
-                                            {Math.round(rate * 100)}%（約{Math.round(rate * total)}人）
+                                            {Math.round(rate * 100)}%（約{Math.round(rate * total)}セッション）
                                         </span>
                                     </div>
                                 );
@@ -117,7 +117,7 @@ function CourseDetailModal({ course, onClose }: { course: CourseResult; onClose:
                         </div>
 
                         <p className="text-[10px] text-muted-foreground leading-relaxed">
-                            ※ ユーザーがアップロードした成績データに基づく分布です。実際の成績分布とは異なる場合があります。
+                            ※ ユーザーがアップロードした成績データに基づく分布です。実際の成績分布（参考値・10セッション以上）とは異なる場合があります。
                         </p>
                     </>
                 ) : (
@@ -145,7 +145,7 @@ function CourseCard({ course, onClick }: { course: CourseResult; onClick: () => 
             {course.gradeDist && course.totalCount ? (
                 <GradeBar dist={course.gradeDist} total={course.totalCount} />
             ) : (
-                <p className="text-[10px] text-muted-foreground mt-1">成績データなし</p>
+                <p className="text-[10px] text-muted-foreground mt-1">成績分布は未取得またはプライバシー保護のため非公開</p>
             )}
         </button>
     );
@@ -196,6 +196,7 @@ export default function CourseSearch() {
             if (q) params.set('q', q);
             if (year) params.set('year', String(year));
             const res = await fetch(`/api/courses?${params}`);
+            if (!res.ok) throw new Error('検索に接続できません');
             const data = await res.json() as CoursesResponse;
             setResults(data.results);
             setTotal(data.total);
@@ -210,36 +211,22 @@ export default function CourseSearch() {
         }
     }, []);
 
-    // 初回 & yearFilter変更でデフォルト取得
+    // Debounce input; one effect owns requests for query, year and sort changes.
     useEffect(() => {
-        if (!isSearchMode) {
-            fetchResults('', 0, yearFilter, sortKey);
-        }
-    }, [yearFilter]);
-
-    // クエリ変更でデバウンス検索
-    useEffect(() => {
-        const trimmed = query.trim();
-        if (!trimmed) {
-            fetchResults('', 0, yearFilter, sortKey);
-            setSearched(false);
-            return;
-        }
-        if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
-            fetchResults(trimmed, 0, yearFilter, sortKey);
-        }, 300);
+            fetchResults(query.trim(), 0, yearFilter, sortKey);
+        }, query.trim() ? 300 : 0);
         return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-    }, [query]);
+    }, [query, yearFilter, sortKey, fetchResults]);
 
     const handleYearFilter = (year: number | null) => {
         setYearFilter(year);
-        fetchResults(query.trim(), 0, year, sortKey);
+
     };
 
     const handleSort = (key: SortKey) => {
         setSortKey(key);
-        fetchResults(isSearchMode ? query.trim() : '', 0, yearFilter, key);
+
     };
 
     return (

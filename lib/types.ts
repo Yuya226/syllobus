@@ -70,7 +70,7 @@ export interface AggregateStats {
     totalParticipants: number;
     averageGpa: number;
     stdDev: number;
-    userPercentile: number;
+    userPercentile: number | null;
     facultyBreakdown: Record<string, number>;
     facultyGpaBreakdown: Record<string, number>;
     hardCourses: HardCourse[];

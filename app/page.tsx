@@ -51,11 +51,12 @@ export default function Home() {
                                     </Link>
                                 </Button>
                                 <Button asChild size="lg" variant="outline" className="text-base">
-                                    <Link href="/search">
+                                    <Link href="/dashboard?demo=1">
                                         <Search className="mr-2 h-4 w-4" />
-                                        楽単を探す
+                                        サンプルデータで試す
                                     </Link>
                                 </Button>
+                                <Button asChild size="lg" variant="outline"><Link href="/search">科目を探す</Link></Button>
                             </div>
                         </motion.div>
 

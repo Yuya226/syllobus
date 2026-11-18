@@ -7,7 +7,7 @@ import { Share2, Copy, Check } from "lucide-react";
 import type { AnalysisResult, AggregateStats } from "@/lib/types";
 
 function deviationComment(val: number): string {
-    if (val >= 75) return "阪大内でも最上位クラス。就活でも自信を持ってGPAを出せます。";
+    if (val >= 75) return "投稿データ内で平均を大きく上回っています。";
     if (val >= 65) return "平均を大きく上回る優秀な成績。しっかり努力が実っています。";
     if (val >= 55) return "平均よりやや上。安定した成績をキープしています。";
     if (val >= 45) return "全体の中間付近。履修戦略を見直すと一気に伸びるかも。";
@@ -35,14 +35,14 @@ export default function GpaDeviationCard({ analysisData, stats, deviation, parti
     const handleShare = () => {
         const devText = deviation != null ? `偏差値 ${deviation}` : `GPA ${analysisData.gpa.cumulative}`;
         const percentileText = stats?.userPercentile ? `上位${stats.userPercentile}%` : '';
-        const text = `阪大内GPA${devText}！\nGPA ${analysisData.gpa.cumulative}${percentileText ? ` / ${percentileText}` : ''}\n\n#阪大成績偏差値 #シロバス\nhttps://handaigrade.vercel.app`;
+        const text = `投稿者内GPA${devText}！\nGPA ${analysisData.gpa.cumulative}${percentileText ? ` / ${percentileText}` : ''}\n\n#阪大成績偏差値 #シロバス\nhttps://syllobus.com`;
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
     };
 
     const handleCopy = async () => {
         const devText = deviation != null ? `偏差値 ${deviation}` : `GPA ${analysisData.gpa.cumulative}`;
         const percentileText = stats?.userPercentile ? `上位${stats.userPercentile}%` : '';
-        await navigator.clipboard.writeText(`阪大内GPA${devText}！\nGPA ${analysisData.gpa.cumulative}${percentileText ? ` / ${percentileText}` : ''}\n#阪大成績偏差値 #シロバス`);
+        await navigator.clipboard.writeText(`投稿者内GPA${devText}！\nGPA ${analysisData.gpa.cumulative}${percentileText ? ` / ${percentileText}` : ''}\n#阪大成績偏差値 #シロバス`);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
@@ -51,7 +51,7 @@ export default function GpaDeviationCard({ analysisData, stats, deviation, parti
         <Card className="overflow-hidden border-0 shadow-md">
             <div className={`bg-gradient-to-br ${deviation != null ? deviationColor(deviation) : 'from-primary to-blue-600'} p-5 text-white`}>
                 <p className="text-sm font-semibold opacity-85 mb-1">
-                    阪大内GPA偏差値｜{(stats?.totalParticipants ?? participantCount) != null ? `${stats?.totalParticipants ?? participantCount}人の母数` : 'データ取得中...'}
+                    投稿者内GPA偏差値｜{(stats?.totalParticipants ?? participantCount ?? 0) > 0 ? `${stats?.totalParticipants ?? participantCount}セッションの標本` : '比較データなし'}
                 </p>
                 {deviation != null ? (
                     <div className="grid gap-4 md:grid-cols-[180px_1fr] md:items-end">
@@ -74,11 +74,12 @@ export default function GpaDeviationCard({ analysisData, stats, deviation, parti
                 ) : (
                     <div className="py-4">
                         <p className="text-5xl font-black opacity-40">--</p>
-                        <p className="text-sm opacity-70 mt-2">データ収集中。参加者が増えると偏差値が表示されます。</p>
+                        <p className="text-sm opacity-70 mt-2">10セッション未満は非公開です。比較データがない場合も表示されません。</p>
                     </div>
                 )}
             </div>
-            <CardContent className="flex gap-2 p-4">
+            <p className="px-4 pt-3 text-xs text-muted-foreground">任意投稿者の参考値であり、阪大全体を代表する統計ではありません。</p>
+            <CardContent className="flex flex-wrap gap-2 p-4">
                 <Button onClick={handleShare} size="sm" className="gap-1.5 flex-1">
                     <Share2 className="h-3.5 w-3.5" />
                     X でシェア

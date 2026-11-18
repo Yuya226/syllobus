@@ -63,7 +63,7 @@ export default function StatsPanel({ analysisData, stats, faculty }: Props) {
         : [];
 
     const gpaTrend = buildGpaTrend(analysisData.gpa.semesters);
-    const totalRequired = analysisData.graduationRequirement.total;
+    const totalRequired = 0; // Admission year is selected separately in GraduationCheck.
 
     return (
         <div className="space-y-5">

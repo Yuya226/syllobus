@@ -8,35 +8,31 @@ import GradeAnalysis from "@/components/dashboard/GradeAnalysis";
 import type { AggregateStats } from "@/lib/types";
 
 export default function Dashboard() {
+    const [demo, setDemo] = useState<boolean | null>(null);
+    const [sessionError, setSessionError] = useState('');
     const [sessionId, setSessionId] = useState('');
     const [stats, setStats] = useState<AggregateStats | null>(null);
     const [staleData, setStaleData] = useState(false);
 
     useEffect(() => {
-        let id = localStorage.getItem('handai_session_id');
-        if (!id) {
-            id = crypto.randomUUID();
-            localStorage.setItem('handai_session_id', id);
-        }
-        setSessionId(id);
-
-        const rawAnalysis = localStorage.getItem('handai_analysis_data');
-        const params = new URLSearchParams();
-        if (rawAnalysis) {
-            // パーソナライズ統計は gpa + session_id の両方が必要
-            params.set('gpa', String((JSON.parse(rawAnalysis) as { gpa: { cumulative: number } }).gpa.cumulative));
-            params.set('session_id', id);
-        }
-
-        fetch(`/api/stats?${params}`)
-            .then(r => r.ok ? r.json() : null)
-            .then((s: AggregateStats | null) => { if (s) setStats(s); })
-            .catch(() => {});
-
-        fetch(`/api/session-info?session_id=${id}`)
-            .then(r => r.json())
-            .then(({ stale }: { stale: boolean }) => setStaleData(stale))
-            .catch(() => {});
+        const isDemo = new URLSearchParams(window.location.search).get('demo') === '1';
+        // URL is browser-owned state; initialize after hydration.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setDemo(isDemo);
+        if (isDemo) return;
+        fetch('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: localStorage.getItem('handai_session_id') }),
+        }).then(async r => {
+            const data = await r.json();
+            if (!r.ok) throw new Error(data.error);
+            if (data.replaced) setSessionError('以前のサーバー保存データの所有権を確認できないため、新しいセッションを作成しました。端末の成績は残ります。以前のサーバーデータの削除は運営へお問い合わせください。');
+            localStorage.setItem('handai_session_id', data.session_id);
+            setSessionId(data.session_id);
+            const info = await fetch(`/api/session-info?session_id=${data.session_id}`);
+            if (info.ok) setStaleData((await info.json()).stale);
+        }).catch(e => setSessionError(e.message));
+        fetch('/api/stats').then(r => r.ok ? r.json() : null)
+            .then((s: AggregateStats | null) => { if (s) setStats(s); }).catch(() => {});
     }, []);
 
     return (
@@ -60,12 +56,14 @@ export default function Dashboard() {
                         <p className="text-xs font-semibold uppercase text-muted-foreground">Dashboard</p>
                         <h1 className="text-2xl font-black tracking-tight">マイ成績・解析</h1>
                     </div>
-                    <GradeAnalysis
+                    {sessionError && <p role="alert" className="mb-4 text-sm text-amber-700">{sessionError}</p>}
+                    {demo !== null && <GradeAnalysis
+                        demo={demo}
                         stats={stats}
                         sessionId={sessionId}
                         onStatsUpdate={setStats}
                         staleData={staleData}
-                    />
+                    />}
                 </div>
             </main>
         </div>

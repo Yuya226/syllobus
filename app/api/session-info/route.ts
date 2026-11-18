@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { ownsSession } from '@/lib/session-auth';
 import type { Grade } from '@/lib/types';
 
 export async function GET(req: NextRequest) {
     const sessionId = req.nextUrl.searchParams.get('session_id');
-    if (!sessionId) return NextResponse.json({ stale: false, hasSubmission: false });
+    if (!ownsSession(req, sessionId)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const currentVersion = parseInt(process.env.PARSER_VERSION ?? '1');
     const supabase = getSupabaseAdmin();
 
-    const { data } = await supabase
+    const { data, error } = await supabase
         .from('grade_submissions')
         .select('parser_version, faculty, subject_name, course_code, grade, credits, year')
         .eq('session_id', sessionId);
 
+    if (error) return NextResponse.json({ error: '復元できませんでした。' }, { status: 503 });
     if (!data || data.length === 0) return NextResponse.json({ stale: false, hasSubmission: false });
 
     const sessionVersion = data[0].parser_version ?? 0;
@@ -31,5 +33,5 @@ export async function GET(req: NextRequest) {
 
     const faculty = (data[0].faculty as string | null) ?? null;
 
-    return NextResponse.json({ stale, hasSubmission: true, grades, faculty });
+    return NextResponse.json({ stale, hasSubmission: true, grades, faculty }, { headers: { 'Cache-Control': 'private, no-store' } });
 }

@@ -35,6 +35,8 @@ export default function CoursesPage() {
             return;
         }
         const data = JSON.parse(raw) as AnalysisResult;
+        // Restore browser-owned persisted state after hydration.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setBaseData(data);
         setGrades(data.grades);
         setCurrentGpa(data.gpa.cumulative);
