@@ -1,5 +1,7 @@
 # Cloudflare移行（2026-11-19）
 
+> 2026-11-26更新：通常の名前解決でsyllobus.comの保存・復元・削除・他セッション拒否の検証が成功。DNS反映待ちは解消。依存監査も全依存0件へ更新済み。以下は移行時の経緯を含むため、現在の残作業は[公開受入チェック](release-acceptance.md)を参照。
+
 復元中のSupabaseを変更・削除せず、新しいCloudflare Workers + D1に新規保存先を用意する。Next.js / Reactの画面と既存APIの認証・同意・少人数抑制を維持。OpenNextでWorkersへビルドする。Google Cloud VisionはSDKの動的コード生成を避け、署名JWTによるOAuth認証とREST APIを使用し、レート制限はD1に移行。IPのHMACと固定時間帯によるカウンターを原子的に更新し、1時間10回を上限とする。
 
 ## データ

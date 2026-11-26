@@ -15,11 +15,8 @@ import { normalizeGradeOCR } from '@/lib/grades';
 import { TOTAL_REQUIRED_CREDITS } from '@/lib/requirements';
 import { checkRateLimit } from '@/lib/ratelimit';
 
-function inferSemester(lineStr: string): string {
-    if (/前学期|前期|春学期|春〜夏学期/.test(lineStr)) return '前期';
-    if (/後学期|後期|秋学期|秋〜冬学期/.test(lineStr)) return '後期';
-    if (/通年/.test(lineStr)) return '通年';
-    return '前期';
+function inferSemester(lineStr: string): string | null {
+    return lineStr.match(/春〜夏学期|秋〜冬学期|前学期|後学期|春学期|夏学期|秋学期|冬学期|前期|後期|通年/)?.[0] ?? null;
 }
 
 

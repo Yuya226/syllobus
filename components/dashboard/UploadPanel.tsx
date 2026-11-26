@@ -11,24 +11,7 @@ import { FACULTY_OPTIONS } from "@/lib/types";
 import { enrichForReview } from "@/lib/enrich-for-review";
 import { parseCreditCSV, type ImportInfo } from '@/lib/credit-csv';
 import { parseKoanCSV } from "@/lib/csv";
-
-function mergeGrades(allGrades: Grade[][]): Grade[] {
-    const map = new Map<string, Grade>();
-    for (const grades of allGrades) {
-        for (const grade of grades) {
-            const key = grade.courseCode
-                ? `${grade.courseCode}-${grade.year}`
-                : `${grade.subject}-${grade.year}`;
-            const existing = map.get(key);
-            if (!existing) {
-                map.set(key, grade);
-            } else if (existing.grade === 'P' && grade.grade !== 'P') {
-                map.set(key, grade);
-            }
-        }
-    }
-    return Array.from(map.values());
-}
+import { mergeImageGrades } from '@/lib/merge-image-grades';
 
 interface Props {
     stats: AggregateStats | null;
@@ -74,7 +57,7 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
                 if (!data.grades.length) throw new Error('成績を読み取れませんでした。「履修成績照会」で「画面に表示する」を押した一覧を選んでください。「単位修得状況照会」は対象外です。');
                 return data.grades;
             }));
-            onGradesParsed(mergeGrades(results));
+            onGradesParsed(mergeImageGrades(results), '画像の単位数・区分は未照合または推定を含みます。学期が確認できない場合は「不明」として扱います。画像間で読取結果が異なる行は残しているため、元の一覧と照合し、重複・評語・単位数を修正してください。正確な区分・単位数・学期を含む単位修得CSVを推奨します。');
             setUploadProgress(100);
         } catch (error) {
             console.error("Error analyzing file:", error);

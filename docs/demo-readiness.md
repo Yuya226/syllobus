@@ -1,5 +1,7 @@
 # GUILDデモ公開準備（2026-11-18）
 
+> **履歴資料です。現状は[公開受入チェック](release-acceptance.md)を参照してください。** 以下に残るVercel配信・DB未適用・単位修得CSV非対応・依存警告の記述は初期調査時点のものです。現在はCloudflare Workers + D1へ公開済みで、単位修得CSVを主入力とし、依存監査の警告は解消しています。旧Supabaseデータの移行は別途未完了です。
+
 > 2026-11-19 再調査：以前のHEAD 401は確認処理がサービスキーの余分な引用符を除去していなかったため。アプリと同じ除去処理では認証できる。設定先 `cncgjzyozrfjslypneoo` はRESTスキーマ取得200だが、公開パスは `/` のみ。`subjects`・`grade_submissions`・`credit_snapshots` はすべて404（PGRST205）。テーブル不存在・別プロジェクト・公開スキーマ／権限設定の区別には管理側確認が必要で、空DBとは断定しない。本番はトップ200、stats 500、learning-stats 503、他セッションのcredit-records取得403。管理資格情報・DB接続情報は利用できず、SQL未適用。`node scripts/check-backend.mjs` で個人成績を取得せず再確認できる。
 
 

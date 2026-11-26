@@ -121,6 +121,7 @@ test('synthetic OCR service output reaches the review result without storing gra
     const response=await analyze.POST(imageRequest(new Uint8Array([137,80,78,71,13,10,26,10]),'image/png'));
     assert.equal(response.status,200);
     const data=await response.json(); assert.equal(data.grades.length,1);assert.equal(data.grades[0].grade,'A');
+    assert.equal(data.grades[0].semester,null,'missing semester must not become first semester');
 });
 test('demo categories exercise graduation progress; common-only faculties exclude unrelated credits',()=>{
     const {calcProgress,FACULTY_DEFS}=require('../lib/requirements.ts');
