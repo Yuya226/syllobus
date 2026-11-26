@@ -1,20 +1,20 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { TrendingUp, FileText, Users, LineChart as LineChartIcon } from "lucide-react";
+import { Users, LineChart as LineChartIcon } from "lucide-react";
 import {
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell,
     LineChart, Line, ReferenceLine,
 } from "recharts";
 import type { AnalysisResult, AggregateStats, Faculty } from "@/lib/types";
-import GraduationCheck from "@/components/dashboard/GraduationCheck";
+
 
 const GRADE_DIST_CONFIG = [
-    { grade: "S", color: "#22c55e" },
-    { grade: "A", color: "#3b82f6" },
-    { grade: "B", color: "#eab308" },
-    { grade: "C", color: "#f97316" },
-    { grade: "F", color: "#ef4444" },
+    { grade: "S", color: "#0f766e" },
+    { grade: "A", color: "#2563eb" },
+    { grade: "B", color: "#7c9ed9" },
+    { grade: "C", color: "#94a3b8" },
+    { grade: "F", color: "#e08080" },
 ];
 
 function semesterOrder(sem: string): number {
@@ -44,9 +44,10 @@ interface Props {
     analysisData: AnalysisResult;
     stats: AggregateStats | null;
     faculty: Faculty | '';
+    compact?: boolean;
 }
 
-export default function StatsPanel({ analysisData, stats, faculty }: Props) {
+export default function StatsPanel({ analysisData, stats, faculty, compact = false }: Props) {
     const gradeCounts = analysisData.grades.reduce((acc, curr) => {
         if (curr.grade) acc[curr.grade] = (acc[curr.grade] || 0) + 1;
         return acc;
@@ -63,14 +64,13 @@ export default function StatsPanel({ analysisData, stats, faculty }: Props) {
         : [];
 
     const gpaTrend = buildGpaTrend(analysisData.gpa.semesters);
-    const totalRequired = 0; // Admission year is selected separately in GraduationCheck.
+
 
     return (
         <div className="space-y-5">
             {/* 上段: 学科別GPA + 個人成績 */}
-            <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-5">
-                {facultyGpas.length > 0 && (
-                    <Card>
+            {!compact && facultyGpas.length > 0 && <div className="grid gap-5">
+                    <Card className="rounded-2xl border-border/65 shadow-none">
                         <CardHeader className="pb-3">
                             <CardTitle className="text-sm font-semibold flex items-center gap-2">
                                 <Users className="h-4 w-4 text-blue-500" />
@@ -107,45 +107,11 @@ export default function StatsPanel({ analysisData, stats, faculty }: Props) {
                             )}
                         </CardContent>
                     </Card>
-                )}
-
-                <div className="grid gap-4 grid-cols-2">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium">{analysisData.importInfo ? '取込明細の参考GPA' : '通算GPA'}</CardTitle>
-                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{analysisData.grades.some(g=>g.grade && ['S','A','B','C','F'].includes(g.grade)) ? analysisData.gpa.cumulative : '対象評語なし'}</div>
-                            <p className="text-xs text-muted-foreground">解析データより</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium">修得単位数</CardTitle>
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">
-                                {analysisData.earnedCredits}
-                                {totalRequired > 0 && <span className="text-base font-semibold text-muted-foreground"> / {totalRequired}</span>}
-                            </div>
-                            {totalRequired > 0 ? (
-                                <div className="mt-2 h-1 w-full bg-secondary rounded-full overflow-hidden">
-                                    <div className="h-full bg-primary transition-all duration-500" style={{ width: `${analysisData.graduationRequirement.percentage}%` }} />
-                                </div>
-                            ) : (
-                                <p className="text-xs text-muted-foreground mt-1">総必要単位数は学部要件を確認</p>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
+            </div>}
 
             {/* 下段: 評価分布 + GPA推移 */}
-            <div className={`grid gap-5 ${gpaTrend.length >= 2 ? 'lg:grid-cols-2' : ''}`}>
-                <Card>
+            <div className={`grid gap-5 ${!compact && gpaTrend.length >= 2 ? 'lg:grid-cols-2' : ''}`}>
+                {(!compact || gpaTrend.length < 2) && <Card className="rounded-2xl border-border/65 shadow-none">
                     <CardHeader>
                         <CardTitle className="text-sm font-medium">評価分布</CardTitle>
                         <CardDescription>S / A / B / C / F の取得数</CardDescription>
@@ -164,10 +130,10 @@ export default function StatsPanel({ analysisData, stats, faculty }: Props) {
                             </BarChart>
                         </ResponsiveContainer>
                     </CardContent>
-                </Card>
+                </Card>}
 
                 {gpaTrend.length >= 2 && (
-                    <Card>
+                    <Card className="rounded-2xl border-border/65 shadow-none">
                         <CardHeader>
                             <CardTitle className="text-sm font-medium flex items-center gap-2">
                                 <LineChartIcon className="h-4 w-4 text-primary" />
@@ -201,8 +167,7 @@ export default function StatsPanel({ analysisData, stats, faculty }: Props) {
                 )}
             </div>
 
-            {/* 下段: 卒業要件（全幅） */}
-            <GraduationCheck grades={analysisData.grades} faculty={faculty} />
+
         </div>
     );
 }

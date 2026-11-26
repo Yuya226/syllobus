@@ -1,5 +1,5 @@
 "use client";
-import FacultyRequirements from "./FacultyRequirements";
+import FacultyRequirements, {type GraduationSelection} from "./FacultyRequirements";
 
 import { useState } from "react";
 import {
@@ -291,7 +291,7 @@ function GraduationDetails({ grades, faculty, admissionYear }: { grades: Grade[]
     // 学部未選択 or 未対応学部
     if (!faculty || !def) {
         return (
-            <Card>
+            <Card className="rounded-2xl border-border/65 shadow-none">
                 <CardContent className="py-6 text-center space-y-1">
                     <GraduationCap className="h-8 w-8 mx-auto text-muted-foreground/40" />
                     <p className="text-sm font-medium text-muted-foreground">卒業要件チェック</p>
@@ -320,7 +320,7 @@ function GraduationDetails({ grades, faculty, admissionYear }: { grades: Grade[]
         && remaining === 0;
 
     return (
-        <Card>
+        <Card className="rounded-2xl border-border/65 shadow-none">
             <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                     <GraduationCap className="h-4 w-4 text-primary" />
@@ -340,7 +340,7 @@ function GraduationDetails({ grades, faculty, admissionYear }: { grades: Grade[]
                             <HelpCircle className="inline h-3 w-3 mr-0.5 align-middle" />
                             一部未確認の項目があります
                         </p>
-                        <p className="leading-relaxed">{def.disclaimer}</p>
+                        <details className="mt-1"><summary className="cursor-pointer">適用条件と確認事項</summary><p className="mt-2 leading-relaxed">{def.disclaimer}</p></details>
                     </div>
                 )}
 
@@ -414,17 +414,21 @@ function GraduationDetails({ grades, faculty, admissionYear }: { grades: Grade[]
 }
 
 
-export default function GraduationCheck({ grades, faculty }: { grades: Grade[]; faculty: Faculty | '' }) {
-    const [year, setYear] = useState('');
+export default function GraduationCheck({ grades, faculty, selection, onSettings }: { grades: Grade[]; faculty: Faculty | ''; selection?:GraduationSelection; onSettings?:()=>void }) {
+    const [localYear, setYear] = useState('');
+    const year=selection?.year??localYear;
     const reference = getGraduationReference(faculty, Number(year));
     const uncertain = ['外国語学部', '薬学部', '基礎工学部'].includes(faculty);
-    if (faculty && faculty !== '経済学部') return <FacultyRequirements key={faculty} faculty={faculty} grades={grades}/>;
+    if (faculty && faculty !== '経済学部') return <FacultyRequirements key={faculty} faculty={faculty} grades={grades} selection={selection}/>;
     return <div className="space-y-3">
         <div className="rounded border bg-card p-4 text-sm space-y-3">
-            <h3 className="font-bold">卒業要件の対応範囲</h3>
+            <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">卒業要件の確認</h3>{onSettings&&<button className="text-xs font-medium text-primary underline underline-offset-4" onClick={onSettings}>学部・年度を設定</button>}</div>
+            <p className="text-xs text-muted-foreground">{faculty||'学部未選択'} · {year?`${year}年度入学`:'入学年度未設定'}</p>
+            <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">対応範囲・判定の見方</summary><div className="mt-3 space-y-3 leading-relaxed">            <h3 className="font-bold">卒業要件の対応範囲</h3>
             <p>経済学部は専門科目・自由選択を含む参考計算。理学部は2024〜2026年度の専門を含む最低単位数に対応。他学部は学科・コースを選択して共通教育と確認済みの専門最低数を比較できます。外国語学部は共通教育のみ。年度別適用が未確認の部分は確定判定しません。</p>
             <p>経済学部は2019〜2024年度入学者用の公式確認表と必要単位数を照合済みで、2025年度以降も参考計算を表示します。2026年度学生便覧にも「2025年度以降入学者用」の同じ確認表が掲載されています。他学部は現行公開資料との対照を表示します。科目の読替・指定科目・外国語の内訳は別途確認が必要で、卒業可否は判定できません。</p>
-            <label className="block">入学年度 <select value={year} onChange={e => setYear(e.target.value)} className="rounded border bg-background p-2"><option value="">選択してください</option><option value="older">2018年度以前（未検証）</option>{[2019, 2020, 2021, 2022, 2023, 2024].map(y => <option key={y} value={y}>{y}年度{faculty === '経済学部' ? '（参考計算）' : '（未検証）'}</option>)}<option value="2025">2025年度（参考計算）</option><option value="2026">2026年度以降{faculty === '経済学部' ? '（2025年度以降の要件・参考計算）' : '（未検証）'}</option></select></label>
+</div></details>
+            {!selection && <label className="block">入学年度 <select value={year} onChange={e => setYear(e.target.value)} className="rounded border bg-background p-2"><option value="">選択してください</option><option value="older">2018年度以前（未検証）</option>{[2019, 2020, 2021, 2022, 2023, 2024].map(y => <option key={y} value={y}>{y}年度{faculty === '経済学部' ? '（参考計算）' : '（未検証）'}</option>)}<option value="2025">2025年度（参考計算）</option><option value="2026">2026年度以降{faculty === '経済学部' ? '（2025年度以降の要件・参考計算）' : '（未検証）'}</option></select></label>}
             <p>最終的な卒業要件は、入学年度・学科に対応する大学公式の学生便覧で確認してください。<a href="https://www.celas.osaka-u.ac.jp/education/prerequisite/" target="_blank" rel="noopener noreferrer" className="underline">大学公式・共通教育要件</a></p>
         </div>
         {reference && !uncertain ? <GraduationDetails key={`${faculty}-${year}`} grades={grades} faculty={faculty} admissionYear={Number(year)} /> : <p className="rounded border p-4 text-sm">{uncertain ? 'この学部は未確認・推定の要件があるため、自動判定を表示していません。' : year ? 'この入学年度の要件は未検証のため、自動判定を表示していません。' : '入学年度を選択すると対応状況を確認できます。'}</p>}

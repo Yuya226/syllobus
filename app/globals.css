@@ -106,3 +106,35 @@
     @apply bg-background text-foreground antialiased;
   }
 }
+
+/* Dashboard presentation only; data and calculation rules remain in lib/. */
+.dashboard-workspace { --radius: 0.875rem; }
+.dashboard-panel, .dashboard-metric {
+  border: 1px solid hsl(var(--border) / .65);
+  border-radius: 1rem;
+  background: hsl(var(--card));
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px hsl(219 35% 12% / .025);
+}
+.dashboard-metric { min-width: 0; }
+.dashboard-action { display: flex; width: 100%; align-items: center; gap: .85rem; padding: 1rem .75rem; border-radius: .75rem; text-align: left; transition: background .15s; }
+.dashboard-action:hover { background: hsl(var(--muted)); }
+.dashboard-action:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.dashboard-table { width: 100%; text-align: left; font-size: .8125rem; border-collapse: collapse; }
+.dashboard-table th { position: sticky; top: 0; background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); font-weight: 500; z-index: 1; }
+.dashboard-table th, .dashboard-table td { padding: .85rem 1rem; }
+.dashboard-table tbody tr { border-top: 1px solid hsl(var(--border) / .65); }
+.dashboard-table tbody tr:hover { background: hsl(var(--muted) / .4); }
+.dashboard-dialog { position: fixed; margin: auto; width: min(640px, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); padding: 0; overflow-y: auto; border: 1px solid hsl(var(--border)); border-radius: 1.25rem; background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: 0 24px 90px #0f172a30; }
+.dashboard-dialog::backdrop { background: #0f172a70; backdrop-filter: blur(4px); }
+.dashboard-dialog input:not([type=checkbox]), .dashboard-dialog select { min-height: 44px; max-width: 100%; background: hsl(var(--background)); }
+.dashboard-field { display: flex; flex-direction: column; gap: .5rem; font-size: .875rem; font-weight: 500; min-width: 0; }
+.dashboard-field input, .dashboard-field select { width: 100%; border: 1px solid hsl(var(--input)); border-radius: .625rem; padding: .625rem .75rem; font-weight: 400; }
+@media (max-width: 640px) {
+  .dashboard-panel, .dashboard-metric { padding: 1rem; }
+  .dashboard-table th, .dashboard-table td { padding: .75rem; }
+  .dashboard-dialog { width: calc(100% - 1rem); max-height: calc(100dvh - 1rem); border-radius: 1rem; }
+  .dashboard-dialog input, .dashboard-dialog select { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .dashboard-workspace *, .dashboard-dialog * { transition-duration: 0s !important; animation-duration: 0s !important; } }
+body:has(dialog.dashboard-dialog[open]) { overflow: hidden; }

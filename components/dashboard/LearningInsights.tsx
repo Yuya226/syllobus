@@ -1,9 +1,11 @@
 'use client';
 import { useState } from 'react';
+import { BarChart3, RefreshCw, ArrowUpRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { Grade, Faculty } from '@/lib/types';
 import { normalizeSubject, relativeStanding, MIN_PEERS, type LearningStats } from '@/lib/learning-stats';
 import { termIndex, type LearningProfile } from '@/lib/learning-profile';
-export default function LearningInsights({grades,faculty,profile,demo=false}: {grades:Grade[];faculty:Faculty|'';profile:LearningProfile;demo?:boolean}) {
+export default function LearningInsights({grades,faculty,profile,demo=false,mode='trends',onSettings}: {mode?:'analysis'|'trends';onSettings?:()=>void;grades:Grade[];faculty:Faculty|'';profile:LearningProfile;demo?:boolean}) {
     const [stats,setStats]=useState<LearningStats|null>(null);const [message,setMessage]=useState('');const [busy,setBusy]=useState(false);
     const [view,setView]=useState<'category'|'subject'>('category');
     const earned=grades.filter(g=>g.passed===true || (g.passed===undefined && g.grade && g.grade!=='F'));
@@ -16,20 +18,40 @@ export default function LearningInsights({grades,faculty,profile,demo=false}: {g
     const pace=stats?.pace.find(p=>p.faculty===faculty && p.year===profile.completedYear && p.semester===profile.completedTerm && p.yearLevel===profile.yearLevels[p.year]);
     const relevant=stats?.trends.filter(t=>t.faculty===faculty && (view==='subject' ? t.subject!==null : t.subject===null))??[];
     const load=async()=>{if(demo)return;setBusy(true);setMessage('比較データを取得中…');try{const r=await fetch('/api/learning-stats');if(!r.ok)throw Error('比較データを取得できません。共有保存の準備中または接続障害です。端末内の分析は利用できます。');setStats(await r.json());setMessage('');}catch(e){setMessage(e instanceof Error?e.message:'取得できませんでした。');}finally{setBusy(false);}};
-    return <section className="rounded border bg-card p-4 space-y-4">
-        <h2 className="font-bold text-lg">単位の積み上がり・履修傾向</h2>
-        <p className="text-sm">大学の区分・実単位数による集計。予定科目や未修得単位は含みません。</p>
-        <div className="grid gap-4 md:grid-cols-2"><div><h3 className="font-semibold">自分の学期別修得単位</h3>{ordered.map(([term,credits])=><div key={term} className="my-2 text-sm"><span>{term}：{credits}単位</span><div className="h-2 rounded bg-secondary"><div className="h-2 rounded bg-primary" style={{width:`${Math.min(credits/Math.max(...terms.values())*100,100)}%`}}/></div></div>)}</div><div><h3 className="font-semibold">大学の小区分別</h3><ul className="text-sm space-y-1">{[...categories].map(([c,n])=><li key={c}>{c}：{n}単位</li>)}</ul></div></div>
-        <details className="text-sm"><summary>取り込んだ科目と区分を確認</summary><div className="overflow-x-auto"><table className="w-full text-left"><thead><tr><th>科目</th><th>大学の区分／小区分</th><th>修得時期</th><th>単位・評語</th></tr></thead><tbody>{grades.map((g,i)=><tr key={i} className="border-t"><td className="p-2">{g.subject}</td><td>{g.categoryDetail??'—'}／{g.category??'未分類'}</td><td>{g.year} {g.semester??'不明'}</td><td>{g.credits}／{g.grade??'未確認'}</td></tr>)}</tbody></table></div></details>
-        <h3 className="font-semibold">同学部・同学年との単位取得ペース</h3>
-        <p className="text-sm">同じ年度・学期末、同じ自己申告学年の全件投稿を比較。{MIN_PEERS}セッション以上で表示します。実人数や学部全体の平均を保証しません。</p>
-        {demo?<p className="text-sm">デモでは架空の個人成績だけを表示します。実際の学生との比較データは取得しません。</p>:<button className="rounded border px-4 py-2" disabled={busy} onClick={load}>共有された比較データを見る</button>}
-        <p role="status" className="text-sm">{message}</p>
-        {stats && <p className="text-sm">{pace && comparable ? `自分 ${total}単位／投稿者平均 ${pace.averageCredits}単位（${pace.count}セッション・参考値）` : '同条件の比較データは未収集、条件未入力、または少数保護のため表示できません。ゼロ単位という意味ではありません。'}</p>}
-        <h3 className="font-semibold">先輩を含む過去の修得傾向</h3><p className="text-sm">本人が申告した年次・修得学期別。下記の平均はその科目・区分を修得した投稿者内の値で、未修得者を含む平均や推奨履修順ではありません。異なる入学年度の投稿を含みます。</p>
-        <select aria-label="履修傾向の表示単位" className="rounded border p-2" value={view} onChange={e=>setView(e.target.value as typeof view)}><option value="category">科目区分別</option><option value="subject">科目別</option></select>
-        {relevant.length ? <ul className="text-sm space-y-2">{relevant.map((t,i)=><li key={i}>{t.yearLevel}年次 {t.semester}：{t.subject??t.category}／平均{t.averageCredits}単位（{t.count}セッション）</li>)}</ul> : <p className="text-sm text-muted-foreground">公開条件を満たしたデータが集まると表示します。</p>}
-        <h3 className="font-semibold">科目ごとの相対評価（修得者内）</h3><p className="text-sm">科目名・修得年度・修得学期・学部が一致する投稿を集計します。同名でも内容が異なる可能性があります。合否のみの評語は順位対象外。少数の評語を含む分布は全体を非公開にします。</p>
-        <ul className="space-y-3 text-sm">{grades.map((g,i)=>{const d=stats?.courses.find(d=>d.faculty===faculty&&d.subject===normalizeSubject(g.subject)&&d.year===g.year&&d.semester===g.semester);const rank=d?relativeStanding(d,g.grade):null;return <li key={i} className="rounded border p-3"><p>{g.subject}（{g.year} {g.semester??'学期不明'}）：{g.grade??'未確認'}</p>{d&&rank?<><p>修得者内の上位{rank.topFrom}〜{rank.topTo}%の同順位群（{rank.fromRank}〜{rank.toRank}位相当／{d.count}セッション、同評語{rank.tied}件）</p><p>{Object.entries(d.distribution).map(([k,n])=>`${k}: ${n}件`).join(' ／ ')}・参考値</p></>:<p className="text-muted-foreground">比較データなし／少数保護／順位対象外</p>}</li>;})}</ul>
+    const matches=grades.map(g=>{
+        const distribution=stats?.courses.find(d=>d.faculty===faculty&&d.subject===normalizeSubject(g.subject)&&d.year===g.year&&d.semester===g.semester);
+        return {g,distribution,rank:distribution?relativeStanding(distribution,g.grade):null};
+    });
+    const ranked=matches.filter(m=>m.rank).length;
+    const compareControl=<div className="flex flex-wrap items-center gap-3">
+        {!demo && <Button variant="outline" size="sm" disabled={busy} onClick={load}><RefreshCw className={`mr-2 h-3.5 w-3.5 ${busy?'animate-spin':''}`}/>{busy?'取得中…':stats?'比較データを更新':'比較データを表示'}</Button>}
+        <p role="status" className="text-sm text-muted-foreground">{message}</p>
+    </div>;
+    const empty=(title:string,description:string)=><div className="rounded-xl bg-muted/50 px-5 py-6 text-center"><BarChart3 className="mx-auto mb-3 h-5 w-5 text-muted-foreground"/><p className="text-sm font-semibold">{title}</p><p className="mx-auto mt-2 max-w-lg text-xs leading-relaxed text-muted-foreground">{description}</p></div>;
+    if(mode==='analysis') return <section className="dashboard-panel space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">科目別の成績</h2><p className="mt-1 text-xs text-muted-foreground">{grades.length}科目 · 修得者内の相対評価</p></div>{compareControl}</div>
+        {!ranked && empty(demo?'比較は実データで利用できます':stats?'比較できるデータがまだありません':'自分の成績を、科目ごとに確認',demo?'デモでは架空の成績のみ表示します。実際の学生との比較データは取得しません。':stats?'同条件の標本不足・少数保護・順位対象外の場合は表示しません。成績は下の一覧で確認できます。':'「比較データを表示」で、公開条件を満たした科目の順位とサンプル数を確認できます。')}
+        <p className="text-xs text-muted-foreground sm:hidden">表を左右にスクロールして相対評価を確認できます。</p>
+        <div className="max-h-[460px] overflow-auto rounded-xl border"><table className="dashboard-table min-w-[620px]"><thead><tr><th>科目 / 詳細</th><th>修得時期</th><th>単位</th><th>評価</th><th>相対評価</th><th>標本数</th></tr></thead><tbody>{matches.map(({g,distribution,rank},i)=><tr key={i}>
+            <td className="max-w-64"><details><summary className="cursor-pointer font-medium">{g.subject}</summary><div className="mt-2 space-y-1 text-xs text-muted-foreground"><p>{g.categoryDetail??'区分未記載'} / {g.category??'小区分未記載'}</p>{rank&&distribution&&<p>{rank.fromRank}〜{rank.toRank}位相当・同評語{rank.tied}件<br/>{Object.entries(distribution.distribution).map(([k,n])=>`${k}: ${n}件`).join(' / ')}</p>}</div></details></td>
+            <td className="whitespace-nowrap text-muted-foreground">{g.year}<br/><span className="text-xs">{g.semester??'学期不明'}</span></td><td>{g.credits}</td><td><span className="inline-flex h-7 min-w-7 items-center justify-center rounded-md bg-primary/8 px-1.5 font-semibold text-primary">{g.grade??'—'}</span></td><td className="whitespace-nowrap">{rank?`上位 ${rank.topFrom}〜${rank.topTo}%`:'—'}</td><td>{rank&&distribution?`${distribution.count}件`:'—'}</td>
+        </tr>)}</tbody></table></div>
+        <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">相対評価・同順位・サンプルの見方</summary><p className="mt-3 leading-relaxed">科目名・修得年度・修得学期・学部が一致する投稿を集計します。同名でも授業内容が異なる場合があります。順位は同評語の範囲で表示し、合否のみの評語は対象外です。{MIN_PEERS}セッション以上を基本に、少数の評語を含む分布は全体を非公開にします。修得者内の参考値であり、履修者全体の順位ではありません。科目名を開くと大学の区分と評価分布を確認できます。</p></details>
     </section>;
+    return <div className="space-y-5">
+        <div className="grid gap-5 lg:grid-cols-2">
+            <section className="dashboard-panel"><h2 className="font-semibold">学期ごとの修得単位</h2><p className="mt-1 text-xs text-muted-foreground">これまでの積み上がり</p><div className="mt-5 max-h-72 overflow-auto space-y-4">{ordered.map(([term,credits])=><div key={term} className="text-sm"><div className="mb-2 flex justify-between gap-3"><span className="text-muted-foreground">{term}</span><span className="font-semibold tabular-nums">{credits}<span className="ml-1 text-xs font-normal">単位</span></span></div><div className="h-2 rounded-full bg-muted"><div className="h-2 rounded-full bg-primary/80" style={{width:`${Math.min(credits/Math.max(...terms.values())*100,100)}%`}}/></div></div>)}</div></section>
+            <section className="dashboard-panel"><h2 className="font-semibold">科目区分のバランス</h2><p className="mt-1 text-xs text-muted-foreground">大学CSVの小区分ごとに集計</p><div className="mt-5 max-h-72 overflow-auto divide-y">{[...categories].map(([c,n])=><div key={c} className="flex items-center justify-between gap-4 py-3 text-sm"><span className="text-muted-foreground">{c}</span><span className="shrink-0 font-semibold tabular-nums">{n}<span className="ml-1 text-xs font-normal">単位</span></span></div>)}</div></section>
+        </div>
+        <section className="dashboard-panel space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">みんなの履修と比べる</h2><p className="mt-1 text-xs text-muted-foreground">同じ学部・学年のペースと、先輩の修得傾向</p></div>{compareControl}</div>
+            {demo?empty('デモでは自分の履修傾向を表示します','実際の学生との比較は行いません。実データでは、比較条件を設定して公開標本を確認できます。'):<>
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted/50 p-4"><div><p className="text-sm font-medium">単位取得ペース</p><p className="mt-1 text-xs text-muted-foreground">{profile.completedYear&&profile.completedTerm?`${profile.completedYear}年度 ${profile.completedTerm}末`:'比較する年度・学期末を設定してください'}</p></div>{onSettings&&<Button variant="ghost" size="sm" onClick={onSettings}>比較条件を設定<ArrowUpRight className="ml-1 h-4 w-4"/></Button>}</div>
+                {pace&&comparable?<div className="grid grid-cols-2 gap-4"><div><p className="text-xs text-muted-foreground">自分</p><p className="mt-1 text-2xl font-semibold">{total}<span className="ml-1 text-sm">単位</span></p></div><div><p className="text-xs text-muted-foreground">投稿者平均 · {pace.count}セッション</p><p className="mt-1 text-2xl font-semibold">{pace.averageCredits}<span className="ml-1 text-sm">単位</span></p></div></div>:<p className="text-sm text-muted-foreground">{stats?'同条件のデータ不足・条件未入力・少数保護のため比較は未表示です。ゼロ単位を意味しません。':'比較条件を確認して「比較データを表示」を押してください。'}</p>}
+            </>}
+            <div className="flex items-center justify-between gap-3 border-t pt-5"><h3 className="text-sm font-semibold">過去の修得傾向</h3><select aria-label="履修傾向の表示単位" className="rounded-lg border bg-background p-2 text-sm" value={view} onChange={e=>setView(e.target.value as typeof view)}><option value="category">科目区分別</option><option value="subject">科目別</option></select></div>
+            {relevant.length?<div className="max-h-80 overflow-auto"><table className="dashboard-table min-w-[500px]"><thead><tr><th>年次・学期</th><th>{view==='subject'?'科目':'区分'}</th><th>平均単位</th><th>標本数</th></tr></thead><tbody>{relevant.map((t,i)=><tr key={i}><td>{t.yearLevel}年次 {t.semester}</td><td>{t.subject??t.category}</td><td>{t.averageCredits}</td><td>{t.count}件</td></tr>)}</tbody></table></div>:<p className="rounded-xl bg-muted/40 p-5 text-center text-sm text-muted-foreground">公開条件を満たした履修データが集まると、ここに表示します。</p>}
+            <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">比較条件と集計対象について</summary><p className="mt-3 leading-relaxed">大学の区分・実単位数による集計で、未修得・予定科目は含みません。ペースは同年度・学期末・自己申告学年の全件投稿を{MIN_PEERS}セッション以上で比較します。修得傾向は本人申告の年次・学期別で、その科目を修得した投稿者内の平均です。未修得者を含む平均・推奨履修順ではなく、異なる入学年度も含みます。実人数や学部全体の平均を保証しません。</p></details>
+        </section>
+    </div>;
 }

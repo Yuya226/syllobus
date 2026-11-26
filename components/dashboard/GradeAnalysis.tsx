@@ -4,11 +4,11 @@ import { DEMO_GRADES } from "@/lib/demo";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, ListChecks } from "lucide-react";
+import { RotateCcw, ListChecks, Settings2, X, ArrowUpRight, GraduationCap, TrendingUp, BookOpen, ShieldCheck } from "lucide-react";
 import { FACULTY_OPTIONS } from "@/lib/types";
 import type { AnalysisResult, AggregateStats, Faculty, Grade } from "@/lib/types";
 import { calculateGPA } from "@/lib/gpa";
-import { getTotalRequiredCredits } from "@/lib/requirements";
+import { getTotalRequiredCredits, getGraduationReference, calcProgress } from "@/lib/requirements";
 import GradeReview from "@/components/dashboard/GradeReview";
 import UploadPanel from "@/components/dashboard/UploadPanel";
 import GpaDeviationCard from "@/components/dashboard/GpaDeviationCard";
@@ -16,6 +16,11 @@ import LearningProfileEditor from './LearningProfileEditor';
 import LearningInsights from './LearningInsights';
 import { EMPTY_PROFILE, validProfile, type LearningProfile } from '@/lib/learning-profile';
 import StatsPanel from "@/components/dashboard/StatsPanel";
+
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import GraduationCheck from './GraduationCheck';
+import { FACULTY_CATALOG } from '@/lib/faculty-catalog';
+import { facultyTotals, compareFacultyTotals, BASIC_ENGINEERING_COURSES } from '@/lib/faculty-totals';
 
 function calcDeviation(userGpa: number, mean: number, stdDev: number): number | null {
     if (stdDev < 0.01) return null;
@@ -48,11 +53,17 @@ interface Props {
 
 export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleData = false, demo = false }: Props) {
     const inputStarted = useRef(false);
+    const settingsRef = useRef<HTMLDialogElement>(null);
+    const [activeTab,setActiveTab] = useState('overview');
+    const [settingsTab,setSettingsTab] = useState('profile');
+    const [course,setCourse] = useState('');
+    const openSettings=(tab='profile')=>{setSettingsTab(tab);settingsRef.current?.showModal();};
     const reviewRef = useRef<HTMLDivElement>(null);
     const [reviewWarning, setReviewWarning] = useState('');
     const [importInfo, setImportInfo] = useState<AnalysisResult['importInfo']>();
     const [profile, setProfile] = useState<LearningProfile>(() => {
-        if (demo || typeof window === 'undefined') return EMPTY_PROFILE;
+        if (demo) return {...EMPTY_PROFILE, admissionYear:2025};
+        if (typeof window === 'undefined') return EMPTY_PROFILE;
         try { const p=JSON.parse(localStorage.getItem('syllobus_learning_profile')??'null'); return validProfile(p)?p:EMPTY_PROFILE; } catch { return EMPTY_PROFILE; }
     });
     const changeProfile = (p: LearningProfile) => { setProfile(p); if(!demo) localStorage.setItem('syllobus_learning_profile',JSON.stringify(p)); };
@@ -170,6 +181,9 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
         localStorage.removeItem('handai_faculty');
         localStorage.removeItem('syllobus_learning_profile');
         setProfile(EMPTY_PROFILE);
+        setCourse('');
+        setSaveConsent(false);
+        settingsRef.current?.close();
         setAnalysisData(null);
         setPendingGrades(null);
         setReviewWarning('');
@@ -188,7 +202,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
                     <span>確認した成績・大学の区分・修得学期・学部と入力した比較条件をCloudflare D1に保存し、復元と統計に利用することに同意します（任意）。未選択ならこのブラウザ内のみに保存します。<Link href="/about" className="underline">保存・削除の説明</Link></span>
                 </label>
                 {reviewWarning && <p role="alert" className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">{reviewWarning}</p>}
-                {pendingGrades.every(g=>g.categorySource==='university-csv') && <LearningProfileEditor grades={pendingGrades} value={profile} onChange={changeProfile}/>}
+                {pendingGrades.every(g=>g.categorySource==='university-csv') && <details className="dashboard-panel"><summary className="cursor-pointer text-sm font-medium">比較条件を設定する（任意）</summary><div className="mt-4"><LearningProfileEditor grades={pendingGrades} value={profile} onChange={changeProfile}/></div></details>}
                 <GradeReview initialGrades={pendingGrades} onConfirm={handleConfirm} onEdited={() => changeProfile({...profile, complete:false})} />
             </div>
         );
@@ -215,53 +229,84 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
         ? calcDeviation(analysisData.gpa.cumulative, stats.averageGpa, stats.stdDev)
         : null;
 
+    const reference=faculty==='経済学部'?getGraduationReference(faculty,profile.admissionYear??0):null;
+    const econProgress=reference?calcProgress(analysisData.grades,reference.def):null;
+    const facultyRule=faculty?facultyTotals(faculty,profile.department,profile.admissionYear??0,course):null;
+    const facultyProgress=facultyRule?.verifiedYears.includes(profile.admissionYear??0)?compareFacultyTotals(analysisData.grades,facultyRule):null;
+    const required=econProgress?.totalRequired || (facultyProgress?facultyRule?.total:undefined);
+    const progressCredits=econProgress?.totalEarned??facultyProgress?.total??0;
+    const progressPercent=required?Math.min(100,Math.round(progressCredits/required*100)):null;
+    const hasCredit=Boolean(analysisData.importInfo||demo);
+    const hasGpa=analysisData.grades.some(g=>g.grade&&['S','A','B','C','F'].includes(g.grade));
+    const selection={year:profile.admissionYear?String(profile.admissionYear):'',department:profile.department,course};
+    const catalog=faculty?FACULTY_CATALOG[faculty]:undefined;
+
     return (
-        <div className="space-y-5">
-            {demo && <div className="rounded border border-blue-300 bg-blue-50 p-4 text-sm text-blue-950">デモモード：単位修得CSVの形式を再現した、架空の経済学部生の成績です。サーバーへの送信・保存や実際の学生との比較は行いません。</div>}
-            {!demo && <label className="block text-sm">学部 <select className="rounded border p-2" value={faculty} onChange={e=>{setFaculty(e.target.value as Faculty);localStorage.setItem('handai_faculty',e.target.value);}}><option value="">選択してください</option>{FACULTY_OPTIONS.map(f=><option key={f}>{f}</option>)}</select></label>}
-            {!demo && <div className="space-y-2 text-sm"><p role="status">{saveMessage}</p><div className="flex flex-wrap gap-2">
-                <label className="flex gap-2"><input type="checkbox" checked={saveConsent} onChange={e=>setSaveConsent(e.target.checked)}/>成績・区分・比較条件の共有保存に同意する（任意）</label>
-                {saveConsent && <Button disabled={busy} variant="outline" onClick={() => saveGrades(analysisData.grades)}>確認した内容を共有保存</Button>}
-                <Button disabled={busy} variant="outline" onClick={deleteGrades}>サーバー・端末の成績を削除</Button>
-            </div></div>}
-            {staleData && (
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm">
-                    <p className="text-amber-800 dark:text-amber-300">
-                        解析精度が向上しました。再アップロードするとより正確なデータになります。
-                    </p>
-                    <Button variant="outline" size="sm" onClick={handleReset} className="shrink-0 border-amber-400 text-amber-800 hover:bg-amber-100">
-                        再アップロード
-                    </Button>
-                </div>
-            )}
-            <div className="flex flex-wrap justify-end gap-2">
-                {!demo && <Button asChild variant="outline" size="sm" className="gap-2">
-                    <Link href="/courses">
-                        <ListChecks className="h-4 w-4" />
-                        成績を編集
-                    </Link>
-                </Button>}
-                <Button variant="outline" size="sm" onClick={handleReset} className="gap-2">
-                    <RotateCcw className="h-4 w-4" />
-                    もう一度
-                </Button>
+        <div className="dashboard-workspace space-y-6">
+            <div className="flex items-start justify-between gap-3">
+                <div><p className="text-sm text-muted-foreground">{faculty||'学部未設定'}{profile.admissionYear?` · ${profile.admissionYear}年度入学`:''}</p>{demo&&<p className="mt-2 inline-flex rounded-full bg-primary/8 px-3 py-1 text-xs font-medium text-primary">サンプルデータ · 送信・保存なし</p>}</div>
+                <Button variant="outline" onClick={()=>openSettings()} className="shrink-0 gap-2 rounded-xl"><Settings2 className="h-4 w-4"/><span>設定<span className="hidden sm:inline">とデータ管理</span></span></Button>
             </div>
-
-            {!demo && !analysisData.importInfo && <GpaDeviationCard
-                analysisData={analysisData}
-                stats={stats}
-                deviation={deviation}
-                participantCount={participantCount}
-            />}
-
-            {demo && <details className="rounded border p-3"><summary>サンプル成績一覧（架空）</summary><ul className="mt-3 space-y-2 text-sm">{analysisData.grades.map(g => <li key={g.subject}>{g.subject}：{g.grade}／{g.credits}単位／{g.year}年度</li>)}</ul></details>}
-            {analysisData.importInfo && !demo && <p className="rounded border bg-card p-4 text-sm">大学CSV記載の通算GPA：{analysisData.importInfo.officialGpa ?? '記載なし'}。以下のGPAは取込明細のみの参考計算です。不合格・再履修等の扱いにより大学の通算GPAと一致しない場合があります。</p>}
-            {(analysisData.importInfo || demo) && <><LearningProfileEditor grades={analysisData.grades} value={profile} onChange={changeProfile}/><LearningInsights grades={analysisData.grades} faculty={faculty} profile={profile} demo={demo}/></>}
-            <StatsPanel
-                analysisData={analysisData}
-                stats={demo || analysisData.importInfo ? null : stats}
-                faculty={faculty}
-            />
+            <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
+                <section className="dashboard-metric col-span-2 lg:col-span-1"><div className="flex items-center justify-between"><h2 className="text-sm text-muted-foreground">{hasCredit?'取込明細の参考GPA':'通算GPA'}</h2><TrendingUp className="h-4 w-4 text-primary"/></div><p className="mt-4 text-4xl font-semibold tracking-tight tabular-nums">{hasGpa?analysisData.gpa.cumulative.toFixed(2):'—'}<span className="ml-2 text-sm font-normal text-muted-foreground">/ 4.00</span></p><p className="mt-3 text-xs text-muted-foreground">{hasCredit&&analysisData.importInfo?.officialGpa!==undefined?`大学CSV記載のGPA ${analysisData.importInfo.officialGpa}`:hasGpa?'取り込んだ成績から計算':'GPAの対象評語がありません'}</p></section>
+                <section className="dashboard-metric"><div className="flex items-center justify-between"><h2 className="text-sm text-muted-foreground">修得単位</h2><BookOpen className="h-4 w-4 text-primary"/></div><p className="mt-4 text-4xl font-semibold tracking-tight tabular-nums">{analysisData.earnedCredits}<span className="ml-2 text-sm font-normal text-muted-foreground">単位</span></p><p className="mt-3 text-xs text-muted-foreground">{analysisData.grades.length}科目を取り込み済み</p></section>
+                <section className="dashboard-metric"><div className="flex items-center justify-between"><h2 className="text-sm text-muted-foreground">卒業単位の進捗</h2><GraduationCap className="h-4 w-4 text-primary"/></div>{progressPercent!==null?<><p className="mt-4 text-4xl font-semibold tracking-tight tabular-nums">{progressPercent}<span className="ml-1 text-sm font-normal text-muted-foreground">%</span></p><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{width:`${progressPercent}%`}}/></div><p className="mt-2 text-xs text-muted-foreground">{progressCredits} / {required}単位 · 参考</p></>:<><p className="mt-4 text-lg font-semibold">{profile.admissionYear?'要確認':'年度を設定'}</p><button onClick={()=>openSettings()} className="mt-3 text-xs text-primary underline underline-offset-4">適用条件を確認する</button></>}</section>
+            </div>
+            <p className="text-xs text-muted-foreground">{demo?'架空の経済学部生の成績です。実際の学生との比較は行いません。':'成績の提供・サーバー保存は任意です。'} 卒業進捗は単位数の参考比較で、卒業可否の判定ではありません。</p>
+            {saveMessage && <p role="status" className="rounded-xl border bg-card px-4 py-3 text-sm">{saveMessage}</p>}
+            {staleData&&<div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900"><p>解析精度が向上しました。再アップロードで更新できます。</p><Button variant="outline" size="sm" onClick={handleReset}>再アップロード</Button></div>}
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList aria-label="ダッシュボード" className="dashboard-tabs sticky top-14 z-20 grid h-auto w-full grid-cols-4 rounded-xl border bg-background/95 p-1 backdrop-blur">
+                    {[['overview','概要'],['graduation','卒業要件'],['analysis','成績分析'],['trends','履修傾向']].map(([value,label])=><TabsTrigger key={value} value={value} className="min-h-11 rounded-lg px-1 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{label}</TabsTrigger>)}
+                </TabsList>
+                <TabsContent value="overview" className="mt-6 space-y-5">
+                    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+                        <StatsPanel analysisData={analysisData} stats={demo||hasCredit?null:stats} faculty={faculty} compact/>
+                        <section className="dashboard-panel"><p className="text-xs font-medium uppercase tracking-wider text-primary">Your next step</p><h2 className="mt-2 text-lg font-semibold">次に確認すること</h2><div className="mt-5 space-y-3">
+                            <button className="dashboard-action" onClick={()=>setActiveTab('graduation')}><GraduationCap className="h-5 w-5 text-primary"/><span className="flex-1"><span className="block text-sm font-medium">卒業までの道のり</span><span className="mt-1 block text-xs text-muted-foreground">{required?`総単位の目安まであと${Math.max(0,required-progressCredits)}単位。必修条件も確認`:'学部・年度に合った要件を確認'}</span></span><ArrowUpRight className="h-4 w-4 text-muted-foreground"/></button>
+                            <button className="dashboard-action" onClick={()=>setActiveTab('analysis')}><ListChecks className="h-5 w-5 text-primary"/><span className="flex-1"><span className="block text-sm font-medium">科目ごとの成績を見る</span><span className="mt-1 block text-xs text-muted-foreground">評価・単位・相対評価を一覧で</span></span><ArrowUpRight className="h-4 w-4 text-muted-foreground"/></button>
+                            <button className="dashboard-action" onClick={()=>setActiveTab('trends')}><TrendingUp className="h-5 w-5 text-primary"/><span className="flex-1"><span className="block text-sm font-medium">履修のペースを知る</span><span className="mt-1 block text-xs text-muted-foreground">学期別の積み上がりと科目区分</span></span><ArrowUpRight className="h-4 w-4 text-muted-foreground"/></button>
+                        </div></section>
+                    </div>
+                    <details className="dashboard-panel text-xs text-muted-foreground"><summary className="cursor-pointer font-medium">GPA・単位の計算について</summary><p className="mt-3 leading-relaxed">{hasCredit?'取込明細の参考GPAは、不合格・再履修等の扱いによって大学CSV記載の通算GPAと一致しない場合があります。':'GPAは取り込んだ成績をもとに算出しています。'} 卒業に必要な単位の算入条件・必修科目・読替は卒業要件タブと大学公式の便覧で確認してください。</p></details>
+                </TabsContent>
+                <TabsContent value="graduation" forceMount className="mt-6 data-[state=inactive]:hidden">
+                    <GraduationCheck grades={analysisData.grades} faculty={faculty} selection={selection} onSettings={()=>openSettings()}/>
+                </TabsContent>
+                <TabsContent value="analysis" forceMount className="mt-6 space-y-5 data-[state=inactive]:hidden">
+                    {activeTab==='analysis'&&<StatsPanel analysisData={analysisData} stats={demo||hasCredit?null:stats} faculty={faculty}/>}
+                    {!demo&&!hasCredit&&<GpaDeviationCard analysisData={analysisData} stats={stats} deviation={deviation} participantCount={participantCount}/>}
+                    <LearningInsights grades={analysisData.grades} faculty={faculty} profile={profile} demo={demo} mode="analysis"/>
+                    {!demo&&<Button asChild variant="outline"><Link href="/courses"><ListChecks className="mr-2 h-4 w-4"/>成績を編集する</Link></Button>}
+                </TabsContent>
+                <TabsContent value="trends" forceMount className="mt-6 data-[state=inactive]:hidden">
+                    <LearningInsights grades={analysisData.grades} faculty={faculty} profile={profile} demo={demo} onSettings={()=>openSettings('comparison')}/>
+                </TabsContent>
+            </Tabs>
+            <dialog ref={settingsRef} aria-labelledby="dashboard-settings-title" className="dashboard-dialog">
+                <div className="flex items-center justify-between border-b px-5 py-4"><div><h2 id="dashboard-settings-title" className="font-semibold">設定とデータ管理</h2><p className="mt-1 text-xs text-muted-foreground">{demo?'デモ内だけに適用されます':'変更だけではサーバーへ送信されません'}</p></div><button autoFocus aria-label="設定を閉じる" onClick={()=>settingsRef.current?.close()} className="rounded-lg p-3 hover:bg-muted focus-visible:outline-2 focus-visible:outline-primary"><X className="h-5 w-5"/></button></div>
+                <Tabs value={settingsTab} onValueChange={setSettingsTab} className="p-5">
+                    <TabsList aria-label="設定項目" className="grid h-auto grid-cols-3 mb-6"><TabsTrigger value="profile" className="min-h-10">基本情報</TabsTrigger><TabsTrigger value="comparison" className="min-h-10">比較条件</TabsTrigger><TabsTrigger value="data" className="min-h-10">データ管理</TabsTrigger></TabsList>
+                    <TabsContent value="profile" className="space-y-5">
+                        <label className="dashboard-field">学部<select disabled={demo} value={faculty} onChange={e=>{setFaculty(e.target.value as Faculty);if(!demo)localStorage.setItem('handai_faculty',e.target.value);changeProfile({...profile,department:'',complete:false});setCourse('');}}><option value="">選択してください</option>{FACULTY_OPTIONS.map(f=><option key={f}>{f}</option>)}</select></label>
+                        <div className="grid gap-4 sm:grid-cols-2"><label className="dashboard-field">学科・専攻{catalog?<select value={profile.department} onChange={e=>{changeProfile({...profile,department:e.target.value,complete:false});setCourse('');}}><option value="">選択してください</option>{profile.department&&!(profile.department in catalog.departments)&&<option>{profile.department}</option>}{Object.keys(catalog.departments).map(d=><option key={d}>{d}</option>)}</select>:<input maxLength={100} value={profile.department} onChange={e=>changeProfile({...profile,department:e.target.value})}/>}</label><label className="dashboard-field">入学年度<input type="number" min={1990} max={2100} placeholder="例：2024" value={profile.admissionYear??''} onChange={e=>changeProfile({...profile,admissionYear:e.target.value?Number(e.target.value):null,complete:false})}/></label></div>
+                        {faculty==='基礎工学部'&&BASIC_ENGINEERING_COURSES[profile.department]&&<label className="dashboard-field">履修コース<select value={course} onChange={e=>setCourse(e.target.value)}><option value="">選択してください</option>{Object.keys(BASIC_ENGINEERING_COURSES[profile.department]).map(c=><option key={c}>{c}</option>)}</select></label>}
+                        <p className="rounded-xl bg-muted/50 p-4 text-xs leading-relaxed text-muted-foreground">入学年度と学科は卒業要件の参照に使います。休学・留年等を考慮し、比較に用いる学年は「比較条件」から年度ごとに設定してください。</p>
+                    </TabsContent>
+                    <TabsContent value="comparison"><LearningProfileEditor grades={analysisData.grades} value={profile} onChange={changeProfile} identity={false}/></TabsContent>
+                    <TabsContent value="data" className="space-y-5">
+                        {demo?<div className="rounded-xl bg-primary/5 p-4 text-sm leading-relaxed">架空の成績を使ったデモです。データの送信・サーバー保存・実際の学生との比較は行いません。</div>:<>
+                        <div><h3 className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="h-4 w-4 text-primary"/>成績の共有と保存</h3><p className="mt-2 text-xs leading-relaxed text-muted-foreground">成績・大学の区分・修得学期・学部と比較条件をCloudflare D1に保存し、復元と統計に利用します。共有しなくても端末内の分析を利用できます。</p></div>
+                        <label className="flex items-start gap-3 rounded-xl border p-4 text-sm leading-relaxed"><input className="mt-1 h-4 w-4 shrink-0" type="checkbox" checked={saveConsent} onChange={e=>setSaveConsent(e.target.checked)}/><span>成績・区分・比較条件を提供し、サーバーに保存することに同意します（任意）。<Link href="/about" className="ml-1 underline">保存・削除の説明</Link></span></label>
+                        <Button disabled={!saveConsent||busy} onClick={()=>saveGrades(analysisData.grades)}>{busy?'処理中…':'同意した内容を共有保存'}</Button>
+                        {saveMessage&&<p role="status" className="text-sm">{saveMessage}</p>}
+                        <div className="border-t pt-5"><h3 className="text-sm font-semibold">データを削除する</h3><p className="mt-2 mb-3 text-xs text-muted-foreground">サーバーとこのブラウザの成績を削除します。実行前に確認します。</p><Button variant="outline" disabled={busy} onClick={deleteGrades} className="text-destructive">成績データを削除</Button></div>
+                        </>}
+                        <div className="border-t pt-5"><p className="mb-3 text-xs text-muted-foreground">{demo?'自分の成績を取り込む画面へ移動します。':'この端末の分析をリセットして、ファイルを選び直します。サーバーの保存データは削除されません。'}</p><Button variant="outline" onClick={handleReset}><RotateCcw className="mr-2 h-4 w-4"/>{demo?'自分の成績を取り込む':'ファイルを選び直す'}</Button></div>
+                    </TabsContent>
+                </Tabs>
+                <div className="flex justify-end border-t px-5 py-4"><Button onClick={()=>settingsRef.current?.close()}>完了</Button></div>
+            </dialog>
         </div>
     );
 }

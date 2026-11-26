@@ -51,10 +51,10 @@ export default function Dashboard() {
             </header>
 
             <main className="flex-1 w-full">
-                <div className="mx-auto w-full max-w-6xl px-4 py-5 md:px-8 md:py-8">
+                <div className="mx-auto w-full max-w-7xl px-4 py-5 md:px-8 md:py-8">
                     <div className="mb-5 flex flex-col gap-1">
-                        <p className="text-xs font-semibold uppercase text-muted-foreground">Dashboard</p>
-                        <h1 className="text-2xl font-black tracking-tight">マイ成績・解析</h1>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Dashboard</p>
+                        <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">マイダッシュボード</h1>
                     </div>
                     {sessionError && <p role="alert" className="mb-4 text-sm text-amber-700">{sessionError}</p>}
                     {demo !== null && <GradeAnalysis
