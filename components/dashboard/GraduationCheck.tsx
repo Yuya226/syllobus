@@ -245,12 +245,12 @@ function ManualCheckBanner({ cats }: { cats: GradCategory[] }) {
     const manual = cats.filter(c => c.manualCheck);
     if (manual.length === 0) return null;
     return (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            <p className="font-semibold mb-0.5">
+        <details className="border-t pt-3 text-xs text-muted-foreground">
+            <summary className="cursor-pointer">
                 <HelpCircle className="inline h-3 w-3 mr-0.5 align-middle" />
                 手動確認が必要な科目
-            </p>
-            <ul className="leading-relaxed space-y-0.5">
+            </summary>
+            <ul className="mt-2 leading-relaxed space-y-0.5">
                 {manual.map(cat => (
                     <li key={cat.id}>
                         <span className="font-medium">{cat.label}（{cat.minCredits}単位）</span>
@@ -258,7 +258,7 @@ function ManualCheckBanner({ cats }: { cats: GradCategory[] }) {
                     </li>
                 ))}
             </ul>
-        </div>
+        </details>
     );
 }
 
@@ -333,17 +333,6 @@ function GraduationDetails({ grades, faculty, admissionYear }: { grades: Grade[]
             </CardHeader>
 
             <CardContent className="space-y-5">
-                {/* 未確認データがある場合の確認促進バナー */}
-                {def.disclaimer && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                        <p className="font-semibold mb-0.5">
-                            <HelpCircle className="inline h-3 w-3 mr-0.5 align-middle" />
-                            一部未確認の項目があります
-                        </p>
-                        <details className="mt-1"><summary className="cursor-pointer">適用条件と確認事項</summary><p className="mt-2 leading-relaxed">{def.disclaimer}</p></details>
-                    </div>
-                )}
-
                 {/* 修得単位進捗バー */}
                 <div className="rounded-lg bg-muted/50 p-3 space-y-2">
                     <div className="flex items-baseline justify-between">
@@ -401,6 +390,11 @@ function GraduationDetails({ grades, faculty, admissionYear }: { grades: Grade[]
                 {/* C群が未定義なら「準備中」 */}
                 {!hasC && <ComingSoonGroup />}
 
+                {def.disclaimer && <details className="border-t pt-3 text-xs text-muted-foreground">
+                    <summary className="cursor-pointer">適用条件・未確認の項目</summary>
+                    <p className="mt-2 leading-relaxed">{def.disclaimer}</p>
+                </details>}
+
                 {/* 手動確認バナー */}
                 <ManualCheckBanner cats={allCategories} />
 
@@ -421,6 +415,7 @@ export default function GraduationCheck({ grades, faculty, selection, onSettings
     const uncertain = ['外国語学部', '薬学部', '基礎工学部'].includes(faculty);
     if (faculty && faculty !== '経済学部') return <FacultyRequirements key={faculty} faculty={faculty} grades={grades} selection={selection}/>;
     return <div className="space-y-3">
+        {reference && !uncertain && <GraduationDetails key={`${faculty}-${year}`} grades={grades} faculty={faculty} admissionYear={Number(year)} />}
         <div className="rounded border bg-card p-4 text-sm space-y-3">
             <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">卒業要件の確認</h3>{onSettings&&<button className="text-xs font-medium text-primary underline underline-offset-4" onClick={onSettings}>学部・年度を設定</button>}</div>
             <p className="text-xs text-muted-foreground">{faculty||'学部未選択'} · {year?`${year}年度入学`:'入学年度未設定'}</p>
@@ -429,8 +424,8 @@ export default function GraduationCheck({ grades, faculty, selection, onSettings
             <p>経済学部は2019〜2024年度入学者用の公式確認表と必要単位数を照合済みで、2025年度以降も参考計算を表示します。2026年度学生便覧にも「2025年度以降入学者用」の同じ確認表が掲載されています。他学部は現行公開資料との対照を表示します。科目の読替・指定科目・外国語の内訳は別途確認が必要で、卒業可否は判定できません。</p>
 </div></details>
             {!selection && <label className="block">入学年度 <select value={year} onChange={e => setYear(e.target.value)} className="rounded border bg-background p-2"><option value="">選択してください</option><option value="older">2018年度以前（未検証）</option>{[2019, 2020, 2021, 2022, 2023, 2024].map(y => <option key={y} value={y}>{y}年度{faculty === '経済学部' ? '（参考計算）' : '（未検証）'}</option>)}<option value="2025">2025年度（参考計算）</option><option value="2026">2026年度以降{faculty === '経済学部' ? '（2025年度以降の要件・参考計算）' : '（未検証）'}</option></select></label>}
-            <p>最終的な卒業要件は、入学年度・学科に対応する大学公式の学生便覧で確認してください。<a href="https://www.celas.osaka-u.ac.jp/education/prerequisite/" target="_blank" rel="noopener noreferrer" className="underline">大学公式・共通教育要件</a></p>
+            <p className="text-xs text-muted-foreground">最終確認は入学年度の学生便覧で。<a href="https://www.celas.osaka-u.ac.jp/education/prerequisite/" target="_blank" rel="noopener noreferrer" className="underline">大学公式・共通教育要件</a></p>
         </div>
-        {reference && !uncertain ? <GraduationDetails key={`${faculty}-${year}`} grades={grades} faculty={faculty} admissionYear={Number(year)} /> : <p className="rounded border p-4 text-sm">{uncertain ? 'この学部は未確認・推定の要件があるため、自動判定を表示していません。' : year ? 'この入学年度の要件は未検証のため、自動判定を表示していません。' : '入学年度を選択すると対応状況を確認できます。'}</p>}
+        {!(reference && !uncertain) && <p className="rounded border p-4 text-sm">{uncertain ? 'この学部は未確認・推定の要件があるため、自動判定を表示していません。' : year ? 'この入学年度の要件は未検証のため、自動判定を表示していません。' : '入学年度を選択すると対応状況を確認できます。'}</p>}
     </div>;
 }

@@ -55,3 +55,30 @@ test('course override identity distinguishes the same name across semesters, and
  assert.notEqual(gradeKey(makeGrade()),gradeKey({...makeGrade(),semester:'冬学期'}));
  assert.deepEqual(calculateGPA([{...makeGrade(),grade:'P'}]).semesters,{});
 });
+
+test('admission cohorts remain fixed, anonymous, complete and protected by sample count',()=>{
+ const s=aggregateLearning(snapshots);
+ assert.deepEqual(s.cohorts,[{faculty:'経済学部',admissionYear:2025,year:2025,semester:'夏学期',count:20,averageCredits:2.5}]);
+ assert.equal(aggregateLearning([...snapshots,snapshots[0]]).cohorts[0].count,20);
+ for(const rows of [
+  snapshots.slice(0,19),
+  snapshots.map(s=>({...s,profile:{...profile,complete:false}})),
+  snapshots.map(s=>({...s,profile:{...profile,admissionYear:null}})),
+  snapshots.map(s=>({...s,grades:[{...makeGrade(),semester:null}]})),
+  snapshots.map((s,i)=>({...s,profile:{...profile,admissionYear:i<10?2024:2025}})),
+  snapshots.map(s=>({...s,grades:[makeGrade()]})),
+ ]) assert.equal(aggregateLearning(rows).cohorts.length,0);
+});
+
+test('comparison defaults reuse latest data without guessing year level or completeness',()=>{
+ const {comparisonContext}=require('../lib/comparison-context.ts');
+ const grades=[makeGrade(),{...makeGrade(),year:2026,semester:'春学期',credits:3}];
+ const p={...EMPTY_PROFILE,admissionYear:2025};
+ assert.deepEqual(comparisonContext(grades,p),{year:2026,semester:'春学期',credits:5,known:true,complete:false});
+ assert.deepEqual(p.yearLevels,{});assert.equal(p.completedYear,null);assert.equal(p.complete,false);
+ const selected=comparisonContext(grades,profile);
+ assert.equal(selected.year,2025);assert.equal(selected.credits,2);
+ assert.equal(comparisonContext([{...makeGrade(),semester:null}],p).known,false);
+ assert.equal(comparisonContext([...grades,{...makeGrade(),semester:null}],p).known,false);
+ assert.equal(comparisonContext([],p).year,null);
+});

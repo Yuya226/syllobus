@@ -48,7 +48,7 @@ try {
  assert.deepEqual((await r.json()).snapshot.grades,grades);
  for(const endpoint of ['/api/stats','/api/learning-stats']) {
   r=await request(base+endpoint);assert.equal(r.status,200,endpoint);
-  const data=await r.json();if(endpoint.includes('learning'))assert.deepEqual(data,{courses:[],pace:[],trends:[]},'single test session must not appear in aggregates');
+  const data=await r.json();if(endpoint.includes('learning'))assert.deepEqual(data,{courses:[],pace:[],cohorts:[],trends:[]},'single test session must not appear in aggregates');
  }
  console.log('Workers smoke passed: authentication, save, restore, foreign access denied, aggregates suppressed');
 } finally {

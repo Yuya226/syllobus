@@ -5,8 +5,9 @@ export const MIN_CELL = 5;
 export interface CreditSnapshot { session_id: string; faculty: Faculty; grades: Grade[]; profile: LearningProfile }
 export interface CourseDistribution { subject: string; faculty: string; year: number; semester: string; count: number; distribution: Record<string, number> }
 export interface PaceGroup { faculty: string; yearLevel: number; year: number; semester: string; count: number; averageCredits: number }
+export interface CohortPaceGroup { faculty: string; admissionYear: number; year: number; semester: string; count: number; averageCredits: number }
 export interface TrendGroup { faculty: string; yearLevel: number; semester: string; category: string; subject: string | null; count: number; averageCredits: number }
-export interface LearningStats { courses: CourseDistribution[]; pace: PaceGroup[]; trends: TrendGroup[] }
+export interface LearningStats { courses: CourseDistribution[]; pace: PaceGroup[]; cohorts: CohortPaceGroup[]; trends: TrendGroup[] }
 export const normalizeSubject = (v: string) => v.normalize('NFKC').trim().replace(/\s+/g, ' ');
 const key = (...parts: unknown[]) => JSON.stringify(parts);
 const mean = (values: number[]) => Math.round(values.reduce((a, b) => a + b, 0) / values.length * 10) / 10;
@@ -14,6 +15,7 @@ const mean = (values: number[]) => Math.round(values.reduce((a, b) => a + b, 0) 
 export function aggregateLearning(snapshots: CreditSnapshot[]): LearningStats {
     const courses = new Map<string, { info: Omit<CourseDistribution, 'count' | 'distribution'>; values: Map<string, string> }>();
     const pace = new Map<string, { info: Omit<PaceGroup, 'count' | 'averageCredits'>; values: number[] }>();
+    const cohorts = new Map<string, { info: Omit<CohortPaceGroup, 'count' | 'averageCredits'>; values: number[] }>();
     const trends = new Map<string, { info: Omit<TrendGroup, 'count' | 'averageCredits'>; values: number[] }>();
     const seen = new Set<string>();
     for (const s of snapshots) {
@@ -36,6 +38,11 @@ export function aggregateLearning(snapshots: CreditSnapshot[]): LearningStats {
         if (cutoff === null || !p.completedYear || !p.yearLevels[p.completedYear]) continue;
         // Unknown semesters or records later than the attested cutoff make pace incomparable.
         if (eligible.some(g => termIndex(g.year, g.semester) === null || termIndex(g.year, g.semester)! > cutoff)) continue;
+        if (p.admissionYear && p.admissionYear <= p.completedYear) {
+            const ck = key(s.faculty, p.admissionYear, p.completedYear, p.completedTerm);
+            const cohort = cohorts.get(ck) ?? { info: { faculty: s.faculty, admissionYear: p.admissionYear, year: p.completedYear, semester: p.completedTerm }, values: [] };
+            cohort.values.push(eligible.reduce((n,g)=>n+g.credits,0)); cohorts.set(ck,cohort);
+        }
         const k = key(s.faculty, p.yearLevels[p.completedYear], p.completedYear, p.completedTerm);
         const group = pace.get(k) ?? { info: { faculty: s.faculty, yearLevel: p.yearLevels[p.completedYear], year: p.completedYear, semester: p.completedTerm }, values: [] };
         group.values.push(eligible.reduce((n,g)=>n+g.credits,0)); pace.set(k, group);
@@ -59,6 +66,7 @@ export function aggregateLearning(snapshots: CreditSnapshot[]): LearningStats {
             const cells=Object.values(distribution).filter(n=>n>0);
             return values.size >= MIN_PEERS && cells.length >= 2 && cells.every(n=>n>=MIN_CELL) ? [{...info,count:values.size,distribution}] : [];
         }),
+        cohorts: [...cohorts.values()].filter(g=>g.values.length>=MIN_PEERS && new Set(g.values).size>1).map(({info,values})=>({...info,count:values.length,averageCredits:mean(values)})),
         pace: [...pace.values()].filter(g=>g.values.length>=MIN_PEERS && new Set(g.values).size>1).map(({info,values})=>({...info,count:values.length,averageCredits:mean(values)})),
         trends: [...trends.values()].filter(g=>g.values.length>=MIN_PEERS).map(({info,values})=>({...info,count:values.length,averageCredits:mean(values)})),
     };

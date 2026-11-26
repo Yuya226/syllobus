@@ -4,7 +4,7 @@ import { DEMO_GRADES } from "@/lib/demo";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, ListChecks, Settings2, X, ArrowUpRight, GraduationCap, TrendingUp, BookOpen, ShieldCheck } from "lucide-react";
+import { RotateCcw, ListChecks, Settings2, X, GraduationCap, TrendingUp, BookOpen, ShieldCheck } from "lucide-react";
 import { FACULTY_OPTIONS } from "@/lib/types";
 import type { AnalysisResult, AggregateStats, Faculty, Grade } from "@/lib/types";
 import { calculateGPA } from "@/lib/gpa";
@@ -15,6 +15,7 @@ import GpaDeviationCard from "@/components/dashboard/GpaDeviationCard";
 import LearningProfileEditor from './LearningProfileEditor';
 import LearningInsights from './LearningInsights';
 import { EMPTY_PROFILE, validProfile, type LearningProfile } from '@/lib/learning-profile';
+import { useLearningStats } from './useLearningStats';
 import StatsPanel from "@/components/dashboard/StatsPanel";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -54,7 +55,7 @@ interface Props {
 export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleData = false, demo = false }: Props) {
     const inputStarted = useRef(false);
     const settingsRef = useRef<HTMLDialogElement>(null);
-    const [activeTab,setActiveTab] = useState('overview');
+    const [activeTab,setActiveTab] = useState('graduation');
     const [settingsTab,setSettingsTab] = useState('profile');
     const [course,setCourse] = useState('');
     const openSettings=(tab='profile')=>{setSettingsTab(tab);settingsRef.current?.showModal();};
@@ -78,6 +79,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
         const raw = localStorage.getItem('handai_analysis_data');
         try { return raw ? JSON.parse(raw) as AnalysisResult : null; } catch { return null; }
     });
+    const comparison = useLearningStats(!demo && analysisData !== null);
     const [faculty, setFaculty] = useState<Faculty | ''>(() => {
         if (demo) return "経済学部";
         if (typeof window === "undefined") return '';
@@ -135,6 +137,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
         const result = buildAnalysisResult(confirmedGrades, faculty, importInfo);
         setAnalysisData(result);
         setPendingGrades(null);
+        setActiveTab('graduation');
         localStorage.setItem('handai_analysis_data', JSON.stringify(result));
         localStorage.setItem('handai_faculty', faculty);
 
@@ -248,39 +251,29 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
                 <Button variant="outline" onClick={()=>openSettings()} className="shrink-0 gap-2 rounded-xl"><Settings2 className="h-4 w-4"/><span>設定<span className="hidden sm:inline">とデータ管理</span></span></Button>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
-                <section className="dashboard-metric col-span-2 lg:col-span-1"><div className="flex items-center justify-between"><h2 className="text-sm text-muted-foreground">{hasCredit?'取込明細の参考GPA':'通算GPA'}</h2><TrendingUp className="h-4 w-4 text-primary"/></div><p className="mt-4 text-4xl font-semibold tracking-tight tabular-nums">{hasGpa?analysisData.gpa.cumulative.toFixed(2):'—'}<span className="ml-2 text-sm font-normal text-muted-foreground">/ 4.00</span></p><p className="mt-3 text-xs text-muted-foreground">{hasCredit&&analysisData.importInfo?.officialGpa!==undefined?`大学CSV記載のGPA ${analysisData.importInfo.officialGpa}`:hasGpa?'取り込んだ成績から計算':'GPAの対象評語がありません'}</p></section>
+                <section className="dashboard-metric col-span-2 lg:col-span-1"><div className="flex items-center justify-between"><h2 className="text-sm text-muted-foreground">卒業単位の進捗</h2><GraduationCap className="h-4 w-4 text-primary"/></div>{progressPercent!==null?<><p className="mt-4 text-4xl font-semibold tracking-tight tabular-nums">{progressPercent}<span className="ml-1 text-sm font-normal text-muted-foreground">%</span></p><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{width:`${progressPercent}%`}}/></div><p className="mt-2 text-xs text-muted-foreground">{progressCredits} / {required}単位 · 参考</p></>:<><p className="mt-4 text-lg font-semibold">{profile.admissionYear?'要確認':'年度を設定'}</p><button onClick={()=>openSettings()} className="mt-3 text-xs text-primary underline underline-offset-4">適用条件を確認する</button></>}</section>
                 <section className="dashboard-metric"><div className="flex items-center justify-between"><h2 className="text-sm text-muted-foreground">修得単位</h2><BookOpen className="h-4 w-4 text-primary"/></div><p className="mt-4 text-4xl font-semibold tracking-tight tabular-nums">{analysisData.earnedCredits}<span className="ml-2 text-sm font-normal text-muted-foreground">単位</span></p><p className="mt-3 text-xs text-muted-foreground">{analysisData.grades.length}科目を取り込み済み</p></section>
-                <section className="dashboard-metric"><div className="flex items-center justify-between"><h2 className="text-sm text-muted-foreground">卒業単位の進捗</h2><GraduationCap className="h-4 w-4 text-primary"/></div>{progressPercent!==null?<><p className="mt-4 text-4xl font-semibold tracking-tight tabular-nums">{progressPercent}<span className="ml-1 text-sm font-normal text-muted-foreground">%</span></p><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{width:`${progressPercent}%`}}/></div><p className="mt-2 text-xs text-muted-foreground">{progressCredits} / {required}単位 · 参考</p></>:<><p className="mt-4 text-lg font-semibold">{profile.admissionYear?'要確認':'年度を設定'}</p><button onClick={()=>openSettings()} className="mt-3 text-xs text-primary underline underline-offset-4">適用条件を確認する</button></>}</section>
+                <section className="dashboard-metric"><div className="flex items-center justify-between"><h2 className="text-sm text-muted-foreground">{hasCredit?'取込明細の参考GPA':'通算GPA'}</h2><TrendingUp className="h-4 w-4 text-primary"/></div><p className="mt-4 text-4xl font-semibold tracking-tight tabular-nums">{hasGpa?analysisData.gpa.cumulative.toFixed(2):'—'}<span className="ml-2 text-sm font-normal text-muted-foreground">/ 4.00</span></p><p className="mt-3 text-xs text-muted-foreground">{hasCredit&&analysisData.importInfo?.officialGpa!==undefined?`大学CSV記載のGPA ${analysisData.importInfo.officialGpa}`:hasGpa?'取り込んだ成績から計算':'GPAの対象評語がありません'}</p></section>
             </div>
             <p className="text-xs text-muted-foreground">{demo?'架空データ・実際の学生との比較なし。':'共有保存は任意。'} 卒業進捗は参考値です。最終確認は大学の便覧で。</p>
             {saveMessage && <p role="status" className="rounded-xl border bg-card px-4 py-3 text-sm">{saveMessage}</p>}
             {staleData&&<div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900"><p>解析精度が向上しました。再アップロードで更新できます。</p><Button variant="outline" size="sm" onClick={handleReset}>再アップロード</Button></div>}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList aria-label="ダッシュボード" className="dashboard-tabs sticky top-14 z-20 grid h-auto w-full grid-cols-4 rounded-xl border bg-background/95 p-1 backdrop-blur">
-                    {[['overview','概要'],['graduation','卒業要件'],['analysis','成績分析'],['trends','履修傾向']].map(([value,label])=><TabsTrigger key={value} value={value} className="min-h-11 rounded-lg px-1 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{label}</TabsTrigger>)}
+                <TabsList aria-label="ダッシュボード" className="dashboard-tabs sticky top-14 z-20 grid h-auto w-full grid-cols-3 rounded-xl border bg-background/95 p-1 backdrop-blur">
+                    {[['graduation','卒業要件'],['analysis','成績分析'],['trends','履修傾向']].map(([value,label])=><TabsTrigger key={value} value={value} className="min-h-11 rounded-lg px-1 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">{label}</TabsTrigger>)}
                 </TabsList>
-                <TabsContent value="overview" className="mt-6 space-y-5">
-                    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-                        <StatsPanel analysisData={analysisData} stats={demo||hasCredit?null:stats} faculty={faculty} compact/>
-                        <section className="dashboard-panel"><p className="text-xs font-medium uppercase tracking-wider text-primary">Your next step</p><h2 className="mt-2 text-lg font-semibold">次に確認すること</h2><div className="mt-5 space-y-3">
-                            <button className="dashboard-action" onClick={()=>setActiveTab('graduation')}><GraduationCap className="h-5 w-5 text-primary"/><span className="flex-1"><span className="block text-sm font-medium">卒業までの道のり</span><span className="mt-1 block text-xs text-muted-foreground">{required?`総単位の目安まであと${Math.max(0,required-progressCredits)}単位。必修条件も確認`:'学部・年度に合った要件を確認'}</span></span><ArrowUpRight className="h-4 w-4 text-muted-foreground"/></button>
-                            <button className="dashboard-action" onClick={()=>setActiveTab('analysis')}><ListChecks className="h-5 w-5 text-primary"/><span className="flex-1"><span className="block text-sm font-medium">科目ごとの成績を見る</span><span className="mt-1 block text-xs text-muted-foreground">評価・単位・相対評価を一覧で</span></span><ArrowUpRight className="h-4 w-4 text-muted-foreground"/></button>
-                            <button className="dashboard-action" onClick={()=>setActiveTab('trends')}><TrendingUp className="h-5 w-5 text-primary"/><span className="flex-1"><span className="block text-sm font-medium">履修のペースを知る</span><span className="mt-1 block text-xs text-muted-foreground">学期別の積み上がりと科目区分</span></span><ArrowUpRight className="h-4 w-4 text-muted-foreground"/></button>
-                        </div></section>
-                    </div>
-                    <details className="dashboard-panel text-xs text-muted-foreground"><summary className="cursor-pointer font-medium">GPA・単位の計算について</summary><p className="mt-3 leading-relaxed">{hasCredit?'取込明細の参考GPAは、不合格・再履修等の扱いによって大学CSV記載の通算GPAと一致しない場合があります。':'GPAは取り込んだ成績をもとに算出しています。'} 卒業に必要な単位の算入条件・必修科目・読替は卒業要件タブと大学公式の便覧で確認してください。</p></details>
-                </TabsContent>
                 <TabsContent value="graduation" forceMount className="mt-6 data-[state=inactive]:hidden">
                     <GraduationCheck grades={analysisData.grades} faculty={faculty} selection={selection} onSettings={()=>openSettings()}/>
                 </TabsContent>
                 <TabsContent value="analysis" forceMount className="mt-6 space-y-5 data-[state=inactive]:hidden">
                     {activeTab==='analysis'&&<StatsPanel analysisData={analysisData} stats={demo||hasCredit?null:stats} faculty={faculty}/>}
                     {!demo&&!hasCredit&&<GpaDeviationCard analysisData={analysisData} stats={stats} deviation={deviation} participantCount={participantCount}/>}
-                    <LearningInsights grades={analysisData.grades} faculty={faculty} profile={profile} demo={demo} mode="analysis"/>
+                    <LearningInsights comparison={comparison} grades={analysisData.grades} faculty={faculty} profile={profile} demo={demo} mode="analysis"/>
+                    <details className="text-xs text-muted-foreground"><summary className="cursor-pointer">GPA・単位の計算について</summary><p className="mt-3 leading-relaxed">{hasCredit?'参考GPAは、不合格・再履修等の扱いにより大学記載のGPAと異なる場合があります。':'取り込んだ成績から算出しています。'} 必修・読替などの条件は大学の便覧で確認してください。</p></details>
                     {!demo&&<Button asChild variant="outline"><Link href="/courses"><ListChecks className="mr-2 h-4 w-4"/>成績を編集する</Link></Button>}
                 </TabsContent>
                 <TabsContent value="trends" forceMount className="mt-6 data-[state=inactive]:hidden">
-                    <LearningInsights grades={analysisData.grades} faculty={faculty} profile={profile} demo={demo} onSettings={()=>openSettings('comparison')}/>
+                    <LearningInsights comparison={comparison} grades={analysisData.grades} faculty={faculty} profile={profile} demo={demo} onSettings={()=>openSettings('comparison')}/>
                 </TabsContent>
             </Tabs>
             <dialog ref={settingsRef} aria-labelledby="dashboard-settings-title" className="dashboard-dialog">

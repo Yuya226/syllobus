@@ -1,11 +1,14 @@
 'use client';
 import type { Grade } from '@/lib/types';
+import { comparisonContext } from '@/lib/comparison-context';
 import { TERMS, type LearningProfile } from '@/lib/learning-profile';
-export default function LearningProfileEditor({grades,value,onChange,identity=true}: {identity?:boolean;grades:Grade[];value:LearningProfile;onChange:(p:LearningProfile)=>void}) {
+export default function LearningProfileEditor({grades,value:profile,onChange,identity=true}: {identity?:boolean;grades:Grade[];value:LearningProfile;onChange:(p:LearningProfile)=>void}) {
+    const context = comparisonContext(grades,profile);
+    const value = {...profile,completedYear:context.year,completedTerm:context.semester};
     const years=[...new Set(grades.map(g=>g.year))].sort();
     return <div className="space-y-5 text-sm">
         <h3 className="font-semibold">比較条件</h3>
-        <p>学籍番号から学部・学年を推定しません。学年が不明な年度は空欄のままにしてください。休学・留年等があれば実際の学年を入力してください。</p>
+        <p>比較時点は成績から自動選択。学年は、休学・留年を反映した実際の年次を入力してください。</p>
         {identity && <div className="flex flex-wrap gap-3">
             <label>学科・専攻 <input className="block rounded border p-2 max-w-full" maxLength={100} value={value.department} onChange={e=>onChange({...value,department:e.target.value})}/></label>
             <label>入学年度 <input className="block rounded border p-2 w-28" type="number" min={1990} max={2100} value={value.admissionYear??''} onChange={e=>onChange({...value,admissionYear:e.target.value?Number(e.target.value):null})}/></label>
