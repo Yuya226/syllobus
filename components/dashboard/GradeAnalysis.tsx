@@ -149,7 +149,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
         if (!sessionId) { setSaveMessage('保存機能に接続できません。成績はこのブラウザのみに保存しました。'); return; }
         setBusy(true);
         try {
-            const isCredit = grades.every(g=>g.categorySource==='university-csv');
+            const isCredit = grades.every(g=>['university-csv', 'university-image'].includes(g.categorySource ?? ''));
             const response = await fetch(isCredit ? '/api/credit-records' : '/api/save-grades', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ session_id: sessionId, faculty, grades, profile, consent: true }),
@@ -210,7 +210,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
                     <span>成績・区分・修得時期・学部・比較条件をサーバーに保存し、復元と統計に利用することに同意します（任意）。未選択ならブラウザ内のみ。<Link href="/about" className="underline">保存・削除の説明</Link></span>
                 </label>
                 {reviewWarning && <p role="alert" className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">{reviewWarning}</p>}
-                {pendingGrades.every(g=>g.categorySource==='university-csv') && <details className="dashboard-panel"><summary className="cursor-pointer text-sm font-medium">比較条件を設定する（任意）</summary><div className="mt-4"><LearningProfileEditor identity={false} grades={pendingGrades} value={profile} onChange={changeProfile}/></div></details>}
+                {pendingGrades.every(g=>['university-csv', 'university-image'].includes(g.categorySource ?? '')) && <details className="dashboard-panel"><summary className="cursor-pointer text-sm font-medium">比較条件を設定する（任意）</summary><div className="mt-4"><LearningProfileEditor identity={false} grades={pendingGrades} value={profile} onChange={changeProfile}/></div></details>}
                 <GradeReview initialGrades={pendingGrades} onConfirm={handleConfirm} onEdited={() => changeProfile({...profile, complete:false})} />
             </div>
         );

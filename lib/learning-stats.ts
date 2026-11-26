@@ -23,7 +23,7 @@ export function aggregateLearning(snapshots: CreditSnapshot[]): LearningStats {
         if (seen.has(s.session_id)) continue; seen.add(s.session_id);
         const department = canonicalDepartment(s.faculty, s.profile.department);
         if (!department) continue;
-        const eligible = s.grades.filter(g => g.categorySource === 'university-csv' && g.passed === true);
+        const eligible = s.grades.filter(g => ['university-csv', 'university-image'].includes(g.categorySource ?? '') && g.passed === true);
         const perCourse = new Map<string, Grade[]>();
         for (const g of eligible) {
             if (!g.semester || termIndex(g.year, g.semester) === null || !g.grade || !['S','A','B','C'].includes(g.grade)) continue;

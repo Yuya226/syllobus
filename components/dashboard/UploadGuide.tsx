@@ -9,7 +9,7 @@ export default function UploadGuide({ mode }: { mode: 'image' | 'csv' }) {
     return <details id="upload-guide" className="rounded border p-3 text-sm" onToggle={event=>setOpen(event.currentTarget.open)}>
         <summary className="cursor-pointer font-semibold">{mode === 'image' ? 'スクリーンショット' : 'CSV'}の取得ガイド</summary>
         {open && !guide.video && <UploadWalkthrough key={mode} mode={mode}/>}
-        {guide.video && <ol className="my-3 list-decimal space-y-2 pl-4 text-xs text-muted-foreground"><li>成績 → 単位修得状況照会</li><li>過去を含めた全成績 → ファイルに出力する</li><li>ファイル出力開始 → CSVを保存</li><li>SyllobusでCSVを取り込み、成績を確認</li></ol>}
+        {guide.video && <ol className="my-3 list-decimal space-y-2 pl-4 text-xs text-muted-foreground">{guide.steps.map(step=><li key={step.title}>{step.action}</li>)}</ol>}
         {mode === 'image' && <p className="mb-3 text-xs font-medium">氏名・学籍番号は隠してください。</p>}
         {guide.source && <a href={guide.source.href} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline underline-offset-2">{guide.source.label}</a>}
         {/* eslint-disable-next-line @next/next/no-img-element */}

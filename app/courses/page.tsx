@@ -68,7 +68,7 @@ export default function CoursesPage() {
     }
 
     function updateGrade(idx: number, field: keyof Grade, value: string | number | null) {
-        const updated = grades.map((g, i) => (i === idx ? { ...g, [field]: value, ...(g.categorySource==='university-csv' && field==='grade' ? {passed:value!==null && value!=='F'} : {}) } : g));
+        const updated = grades.map((g, i) => (i === idx ? { ...g, [field]: value, ...(['university-csv', 'university-image'].includes(g.categorySource ?? '') && field==='grade' ? {passed:value!==null && value!=='F'} : {}) } : g));
         applyUpdate(updated);
     }
 

@@ -206,3 +206,10 @@ test('department-scoped API exposes only the new aggregate contract to opted-in 
  const legacy=await learningStats.GET(new Request('https://syllobus.com/api/learning-stats'));
  assert.deepEqual(await legacy.json(),{courses:[],pace:[],cohorts:[],trends:[]});
 });
+
+test('credit screenshot API handles a batch without syllabus enrichment and preserves import provenance',async()=>{
+ annotations=require('./fixtures/credit-image-ocr.json');
+ const form=new FormData();for(let i=0;i<2;i++)form.append('file',new Blob([new Uint8Array([137,80,78,71,13,10,26,10])],{type:'image/png'}),'synthetic.png');
+ const response=await analyze.POST(new NextRequest('https://example.test/api/analyze',{method:'POST',body:form}));
+ assert.equal(response.status,200);const data=await response.json();assert.equal(data.grades.length,3);assert.equal(data.importInfo.kind,'credit-status');assert.equal(data.grades[0].categorySource,'university-image');assert.equal(data.grades[0].credits,4);
+});

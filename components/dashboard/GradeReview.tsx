@@ -14,7 +14,7 @@ const P_VALID_CATEGORIES = new Set(['学問への扉', '必修科目']);
 
 /** このGradeのP成績が確実にOCR誤認であると判断できるか */
 function isSpuriousP(g: Grade): boolean {
-    return g.categorySource !== 'university-csv' && g.grade === 'P' && !!g.category && !P_VALID_CATEGORIES.has(g.category);
+    return !['university-csv', 'university-image'].includes(g.categorySource ?? '') && g.grade === 'P' && !!g.category && !P_VALID_CATEGORIES.has(g.category);
 }
 
 interface Props {
@@ -28,7 +28,7 @@ export default function GradeReview({ initialGrades, onConfirm, onEdited }: Prop
 
     const update = (idx: number, patch: Partial<Grade>) => {
         onEdited?.();
-        setGrades(prev => prev.map((g, i) => i === idx ? { ...g, ...patch, ...(g.categorySource === 'university-csv' && patch.grade ? {passed:patch.grade !== 'F'} : {}) } : g));
+        setGrades(prev => prev.map((g, i) => i === idx ? { ...g, ...patch, ...(['university-csv', 'university-image'].includes(g.categorySource ?? '') && patch.grade ? {passed:patch.grade !== 'F'} : {}) } : g));
     };
 
     const remove = (idx: number) => {
@@ -50,7 +50,7 @@ export default function GradeReview({ initialGrades, onConfirm, onEdited }: Prop
     const hasUnknown = grades.some(g => g.grade === null);
     const hasEmptySubject = grades.some(g => !g.subject.trim());
     const hasInvalidCredits = grades.some(g => !Number.isFinite(g.credits) || g.credits <= 0 || g.credits > 30);
-    const canConfirm = validGrades(grades);
+    const canConfirm = validGrades(grades) && grades.every(g=>g.categorySource!=='university-image' || Boolean(g.category?.trim() && g.categoryDetail?.trim() && g.semester?.trim()));
     const previewGpa = hasInvalidCredits ? '—' : calculateGPA(grades).cumulative;
 
     return (
@@ -124,7 +124,7 @@ export default function GradeReview({ initialGrades, onConfirm, onEdited }: Prop
                                 />
                             </div>
                             <p className="text-[10px] text-muted-foreground ml-4 leading-tight">
-                                {g.categorySource === 'university-csv' ? g.category : g.courseCode ?? '—'} · {g.year} {g.semester ?? ''}
+                                {['university-csv', 'university-image'].includes(g.categorySource ?? '') ? g.category : g.courseCode ?? '—'} · {g.year} {g.semester ?? ''}
                                 {g.teacher && g.teacher !== 'Unknown' ? ` · ${g.teacher}` : ''}
                             </p>
                         </div>
@@ -172,12 +172,18 @@ export default function GradeReview({ initialGrades, onConfirm, onEdited }: Prop
                         >
                             <Trash2 className="h-3.5 w-3.5" />
                         </button>
+                        {g.categorySource==='university-image' && <details className="col-span-4 mt-2 text-xs text-muted-foreground"><summary className="cursor-pointer">区分・年度・学期を確認／修正</summary><div className="mt-2 grid gap-2 sm:grid-cols-2">
+                            <label>科目詳細区分<input aria-label={`${i+1}行目の科目詳細区分`} value={g.categoryDetail ?? ''} maxLength={200} onChange={e=>update(i,{categoryDetail:e.target.value})} className="mt-1 min-h-11 w-full rounded border bg-background px-2 text-base" /></label>
+                            <label>科目小区分<input aria-label={`${i+1}行目の科目小区分`} value={g.category ?? ''} maxLength={200} onChange={e=>update(i,{category:e.target.value})} className="mt-1 min-h-11 w-full rounded border bg-background px-2 text-base" /></label>
+                            <label>修得年度<input aria-label={`${i+1}行目の修得年度`} type="number" min={1990} max={2100} value={Number.isNaN(g.year)?'':g.year} onChange={e=>update(i,{year:e.target.value?Number(e.target.value):NaN})} className="mt-1 min-h-11 w-full rounded border bg-background px-2 text-base" /></label>
+                            <label>修得学期<input aria-label={`${i+1}行目の修得学期`} value={g.semester ?? ''} maxLength={30} onChange={e=>update(i,{semester:e.target.value})} className="mt-1 min-h-11 w-full rounded border bg-background px-2 text-base" /></label>
+                        </div></details>}
                     </div>
                 ))}
             </div>
 
             {/* OCR漏れ科目の手動追加 */}
-            {!initialGrades.every(g=>g.categorySource==='university-csv') && <button
+            {!initialGrades.every(g=>['university-csv', 'university-image'].includes(g.categorySource ?? '')) && <button
                 onClick={addRow}
                 className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed py-2 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/40 hover:bg-muted/30 transition-colors"
             >

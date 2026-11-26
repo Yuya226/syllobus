@@ -12,7 +12,6 @@ import { FACULTY_OPTIONS } from "@/lib/types";
 import { enrichForReview } from "@/lib/enrich-for-review";
 import { parseCreditCSV, type ImportInfo } from '@/lib/credit-csv';
 import { parseKoanCSV } from "@/lib/csv";
-import { mergeImageGrades } from '@/lib/merge-image-grades';
 
 interface Props {
     stats: AggregateStats | null;
@@ -46,19 +45,14 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
         }, 300);
         try {
             if (files.length > 5 || files.some(f => f.size > 4 * 1024 * 1024 || !['image/png', 'image/jpeg', 'image/webp'].includes(f.type))) throw new Error('PNG・JPEG・WebPを1枚4MB以下、最大5枚で選び直してください。');
-            const results = await Promise.all(files.map(async (file) => {
-                const formData = new FormData();
-                formData.append("file", file);
-                const response = await fetch("/api/analyze", { method: "POST", body: formData });
-                if (!response.ok) {
-                    const err = await response.json().catch(() => ({}));
-                    throw new Error(err.error || `Analysis failed: ${response.status}`);
-                }
-                const data: AnalysisResult = await response.json();
-                if (!data.grades.length) throw new Error('成績を読み取れませんでした。「履修成績照会」で「画面に表示する」を押した一覧を選んでください。「単位修得状況照会」は対象外です。');
-                return data.grades;
-            }));
-            onGradesParsed(mergeImageGrades(results), '画像の単位数・区分は未照合または推定を含みます。学期が確認できない場合は「不明」として扱います。画像間で読取結果が異なる行は残しているため、元の一覧と照合し、重複・評語・単位数を修正してください。正確な区分・単位数・学期を含む単位修得CSVを推奨します。');
+            const formData = new FormData();
+            files.forEach(file => formData.append('file', file));
+            const response = await fetch('/api/analyze', { method:'POST', body:formData });
+            const data = await response.json();
+            if(!response.ok)throw new Error(data.error || '解析できませんでした。画像かCSVで再試行してください。');
+            const result = data as AnalysisResult;
+            if(!result.grades.length)throw new Error('成績を読み取れませんでした。単位修得状況照会の表を選んでください。');
+            onGradesParsed(result.grades, result.importInfo?.warnings.join(' ') ?? '読み取り結果を元の成績表と確認してください。', result.importInfo);
             setUploadProgress(100);
         } catch (error) {
             console.error("Error analyzing file:", error);
@@ -124,7 +118,7 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
                         ['成績分析', 'GPAと科目別の評価'],
                     ].map(([title, description]) => <div key={title} className="rounded-md border bg-card p-4 shadow-sm"><h3 className="font-semibold text-sm">{title}</h3><p className="mt-2 text-xs leading-relaxed text-muted-foreground">{description}</p></div>)}
                 </div>
-                <AcquisitionVideo />
+                <AcquisitionVideo key={uploadMode} mode={uploadMode} />
             </div>
 
             <input type="file" ref={fileInputRef} className="hidden" accept="image/png,image/jpeg,image/webp" multiple onChange={handleFileChange} />

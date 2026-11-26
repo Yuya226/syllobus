@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { parseCreditImages, CreditImageError } from '@/lib/credit-image';
+import { mergeImageGrades } from '@/lib/merge-image-grades';
 import { detectText, type VisionAnnotation as IEntityAnnotation } from '@/lib/vision';
 
 interface ParsedLine {
@@ -306,40 +308,38 @@ export async function POST(req: NextRequest) {
 
     try {
         const formData = await req.formData();
-        const file = formData.get('file');
-
-        if (!file || !(file instanceof Blob)) {
-            return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+        const files = formData.getAll('file');
+        if (!files.length || files.length > 5) return NextResponse.json({error:'画像を1〜5枚で選んでください。'}, {status:400});
+        // Validate the entire batch before transmitting any image to OCR.
+        const buffers: Buffer[] = [];
+        for (const file of files) {
+            if (!(file instanceof Blob) || !['image/png','image/jpeg','image/webp'].includes(file.type) || !file.size || file.size > 4*1024*1024)
+                return NextResponse.json({error:'1枚4MB以下のPNG・JPEG・WebPを選んでください。'}, {status:400});
+            const buffer=Buffer.from(await file.arrayBuffer());
+            const valid=(file.type==='image/png' && buffer.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) ||
+                (file.type==='image/jpeg' && buffer[0]===255 && buffer[1]===216 && buffer[2]===255) ||
+                (file.type==='image/webp' && buffer.toString('ascii',0,4)==='RIFF' && buffer.toString('ascii',8,12)==='WEBP');
+            if(!valid)return NextResponse.json({error:'画像形式を確認して選び直してください。'}, {status:400});
+            buffers.push(buffer);
         }
+        const batches = await Promise.all(buffers.map(async buffer => {
+            const result=await detectText(buffer);
+            if(!result.textAnnotations?.length)throw new CreditImageError('文字を読み取れませんでした。鮮明な画像かCSVで再試行してください。',400);
+            return result.textAnnotations;
+        }));
+        const legacy=batches.every(a=>!/(科目小区分|単位修得状況)/.test(a[0]?.description??'') && parseOCRText(a).length>0);
+        let parsedGrades:Grade[];
+        if(legacy) {
+            const rows=batches.map(parseOCRText);
+            if(rows.some(r=>!r.length))throw new CreditImageError('成績表を読み取れませんでした。単位修得状況照会の表かCSVをご利用ください。');
+            parsedGrades=await validateAndEnrichGrades(mergeImageGrades(rows));
+        } else parsedGrades=mergeImageGrades(parseCreditImages(batches));
 
-        if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 4 * 1024 * 1024 || file.size === 0) {
-            return NextResponse.json({ error: '4MB以下のPNG・JPEG・WebP画像を選んでください。' }, { status: 400 });
-        }
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const validImage = (file.type === 'image/png' && buffer.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) ||
-            (file.type === 'image/jpeg' && buffer[0] === 255 && buffer[1] === 216 && buffer[2] === 255) ||
-            (file.type === 'image/webp' && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP');
-        if (!validImage) return NextResponse.json({ error: '画像形式を確認して選び直してください。' }, { status: 400 });
-
-        let parsedGrades: Grade[] = [];
-
-        // --- IMAGE OCR PARSING ROUTE ---
-        const result = await detectText(buffer);
-        const detections = result.textAnnotations;
-
-        if (!detections || detections.length === 0) {
-            return NextResponse.json({ error: '文字を読み取れませんでした。取得ガイドを確認して鮮明な画像を選び直してください。' }, { status: 400 });
-        }
-
-        parsedGrades = parseOCRText(detections);
-        if (!parsedGrades.length) return NextResponse.json({ error: '成績表を読み取れませんでした。「履修成績照会」で「画面に表示する」を押した一覧を選んでください。「単位修得状況照会」は対象外です。CSV出力も利用できます。' }, { status: 422 });
-
-        // subjects テーブルと照合・補完（科目名・単位数の正規化）
-        parsedGrades = await validateAndEnrichGrades(parsedGrades);
-
+        if(parsedGrades.length>500)throw new CreditImageError('科目数が500件を超えています。CSVをご利用ください。');
         const { cumulative, semesters, earnedCredits } = calculateGPA(parsedGrades);
 
         const response: AnalysisResult = {
+            ...(!legacy ? {importInfo:{kind:'credit-status' as const,warnings:['画像から読み取った科目区分・単位数・評語・学期を、元の表と確認してください。修得済み科目の分布であり、不合格を含む履修者全体の分布ではありません。']}} : {}),
             grades: parsedGrades,
             gpa: {
                 cumulative,
@@ -355,7 +355,8 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json(response);
 
-    } catch {
+    } catch (error) {
+        if(error instanceof CreditImageError)return NextResponse.json({error:error.message},{status:error.status});
         return NextResponse.json({ error: '画像の解析に失敗しました。時間をおいて再試行するかCSVをお試しください。' }, { status: 503 });
     }
 }

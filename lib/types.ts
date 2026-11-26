@@ -9,8 +9,10 @@ export interface Grade {
     /** subjects テーブルの category カラム（例: "liberal-arts", "language-1st" 等） */
     category?: string | null;
     categoryDetail?: string | null;
-    categorySource?: 'university-csv';
+    categorySource?: 'university-csv' | 'university-image';
     passed?: boolean;
+    /** Visible KOAN row number, used only to merge overlapping image crops. */
+    sourceRow?: number;
 }
 
 export interface AnalysisResult {

@@ -68,7 +68,7 @@ export function facultyTotals(faculty:Faculty,department:string,year:number,cour
 const normalize=(s:string|null|undefined)=>(s??'').normalize('NFKC').replace(/\s/g,'');
 /** Exact university categories only. Unknown or conflicting categories remain unassigned. */
 export function creditBucket(g:Grade):Bucket|null {
-    if(g.categorySource!=='university-csv') return null;
+    if(!['university-csv', 'university-image'].includes(g.categorySource ?? '')) return null;
     const detail=normalize(g.categoryDetail),sub=normalize(g.category);
     if(/卒業要件外|教職|自由選択|特別科目/.test(detail+sub)) return null;
     const c=universityCategory(g);

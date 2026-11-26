@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     if (!sameOrigin(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     const body = await req.json().catch(() => null);
     if (!ownsSession(req, body?.session_id)) return NextResponse.json({ error: '保存権限を確認できません。ページを再読み込みしてください。' }, { status: 403 });
-    if (!validGrades(body.grades) || body.grades.some((g: import('@/lib/types').Grade) => g.categorySource === 'university-csv') || !['', ...FACULTY_OPTIONS].includes(body.faculty) || body.consent !== true) {
+    if (!validGrades(body.grades) || body.grades.some((g: import('@/lib/types').Grade) => ['university-csv', 'university-image'].includes(g.categorySource ?? '')) || !['', ...FACULTY_OPTIONS].includes(body.faculty) || body.consent !== true) {
         return NextResponse.json({ error: '成績と保存への同意を確認してください。' }, { status: 400 });
     }
     const limited = await checkRateLimit(req);

@@ -1,7 +1,7 @@
 import type { Grade } from './types';
 /** Map explicit university labels, never infer a missing category from a course name. */
 export function universityCategory(g: Grade, economics = false): string | null {
-    if (g.categorySource !== 'university-csv') return null;
+    if (!['university-csv', 'university-image'].includes(g.categorySource ?? '')) return null;
     const sub = g.category?.normalize('NFKC').trim() ?? '';
     const detail = g.categoryDetail?.normalize('NFKC') ?? '';
     if (sub === '学問への扉') return 'gateway';

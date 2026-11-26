@@ -16,7 +16,7 @@ export default function UploadWalkthrough({mode}: {mode:'csv'|'image'}) {
         return ()=>clearTimeout(timer);
     },[step,playing]);
     const image=mode==='image';
-    const screen=image?'履修成績照会':'単位修得状況照会';
+    const screen='単位修得状況照会';
     const target=step===0?{x:193,y:113}:step===1?{x:211,y:153}:{x:215,y:162};
     const cursorStyle={'--cursor-x':target.x+'px','--cursor-y':target.y+'px',animationPlayState:playing?'running':'paused'} as CSSProperties;
     return <div className="mt-3 space-y-3">
@@ -41,7 +41,7 @@ export default function UploadWalkthrough({mode}: {mode:'csv'|'image'}) {
                     <path d="M58 89V112H85" fill="none" stroke="#94a3b8" strokeWidth="1.5"/>
                     <rect x="91" y="96" width="196" height="38" rx="6" fill="#dbeafe" stroke="#3b82f6"/>
                     <text x="189" y="120" textAnchor="middle" fontSize="14" fontWeight="600" fill="#1e40af">{screen}</text>
-                    <text x="160" y="163" textAnchor="middle" fontSize="11" fill="#64748b">{image?'画像は「履修成績照会」から':'CSVは「単位修得状況照会」から'}</text>
+                    <text x="160" y="163" textAnchor="middle" fontSize="11" fill="#64748b">単位修得状況照会から取得</text>
                 </g>:step===1?<g>
                     <text x="28" y="72" fontSize="12" fontWeight="600" fill="#334155">{screen}</text>
                     <rect x="26" y="85" width="268" height="32" rx="5" fill="#eff6ff"/>

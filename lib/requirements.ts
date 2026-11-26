@@ -309,7 +309,7 @@ const ECON_CATEGORY_TO_REQ: Record<string, string> = {
  * 基盤教養は科目名で必修/選択必修を判別する。
  */
 export function classifyEcon(grade: Grade): string | null {
-    if (grade.categorySource === 'university-csv') return universityCategory(grade, true);
+    if (['university-csv', 'university-image'].includes(grade.categorySource ?? '')) return universityCategory(grade, true);
     const cat = grade.category ?? null;
     if (!cat) return null;
     if (cat === '基盤教養教育科目') {
@@ -502,7 +502,7 @@ export function calcProgress(
         const cat = grade.category ?? null;
         if (!cat) return null;
         if (def.classifyFn) return def.classifyFn(grade);
-        if (grade.categorySource === 'university-csv') return universityCategory(grade);
+        if (['university-csv', 'university-image'].includes(grade.categorySource ?? '')) return universityCategory(grade);
         return def.classifyOverrides?.[cat] ?? AB_CATEGORY_MAP[cat] ?? null;
     };
 
