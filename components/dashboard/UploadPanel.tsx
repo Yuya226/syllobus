@@ -112,15 +112,15 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
                     <p className="text-xs font-semibold uppercase text-muted-foreground">Unlock Insights</p>
                     <h2 className="mt-1 text-2xl font-black tracking-tight">成績データをアップロード</h2>
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                        KOANの単位修得状況CSVを端末内で解析し、単位の推移・区分別の修得状況・卒業要件の対照を表示します。
+                        KOANの「単位修得状況照会」からCSVを取り込むだけ。
                     </p>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3">
                     {[
-                        ['大学の区分で確認', '科目小区分・単位数をCSVからそのまま取り込み、卒業要件と対照します。'],
-                        ['単位の積み上がり', '修得年度・学期ごとに、自分の取得ペースと区分別の単位数を確認できます。'],
-                        ['修得者内で比較', '共有データが十分に集まった科目だけ、同順位を考慮した相対評価を表示します。'],
+                        ['卒業要件', '必要な単位を確認'],
+                        ['修得ペース', '学期ごとの単位を確認'],
+                        ['成績分析', 'GPAと科目別の評価'],
                     ].map(([title, description]) => <div key={title} className="rounded-md border bg-card p-4 shadow-sm"><h3 className="font-semibold text-sm">{title}</h3><p className="mt-2 text-xs leading-relaxed text-muted-foreground">{description}</p></div>)}
                 </div>
             </div>
@@ -157,13 +157,13 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
 
                     <div className="flex rounded-md border bg-secondary/50 p-1">
                         <button
-                            onClick={() => setUploadMode('image')}
+                            onClick={() => { if (uploadMode !== 'image') setConsent(false); setUploadMode('image'); }}
                             className={`flex-1 rounded px-2 py-2 text-sm font-semibold transition-colors ${uploadMode === 'image' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             スクリーンショット
                         </button>
                         <button
-                            onClick={() => setUploadMode('csv')}
+                            onClick={() => { if (uploadMode !== 'csv') setConsent(false); setUploadMode('csv'); }}
                             className={`flex-1 rounded px-2 py-2 text-sm font-semibold transition-colors ${uploadMode === 'csv' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                         >
                             単位修得CSV（推奨）
@@ -171,8 +171,9 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
                     </div>
 
                     <UploadGuide mode={uploadMode} />
-                    <label className="flex items-start gap-2 text-sm leading-relaxed"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-1" /><span>データの取扱いを確認しました。単位修得CSVは端末内で解析し、保存に同意するまで成績を送信しません。従来の履修成績CSVは科目照合のため本サービスへ、画像全体はGoogle Cloud Visionへ送信します。結果はこのブラウザに保存され、サーバー保存は確認画面で別途選べます。<Link href="/about" className="underline">詳細</Link></span></label>
-                    {uploadError && <div ref={errorRef} tabIndex={-1} role="alert" className="rounded border border-red-300 p-3 text-sm text-red-700"><p>{uploadError}</p><a href="#upload-guide" className="underline">取得ガイドを確認</a><p>下のボタンからファイルを選び直せます。</p></div>}
+                    <label className="flex items-start gap-2 text-sm leading-relaxed"><input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-1" /><span>{uploadMode === 'image' ? '画像全体をGoogle Cloud Visionへ送信して解析することに同意します。' : '単位修得CSVは端末内で解析、従来の履修成績CSVは科目照合のため本サービスへ送信することを確認しました。'}</span></label>
+                    <p className="text-xs text-muted-foreground">結果はブラウザに保存。サーバー保存は任意です。<Link href="/about" className="ml-1 underline">データの取扱い</Link></p>
+                    {uploadError && <div ref={errorRef} tabIndex={-1} role="alert" className="rounded border border-red-300 p-3 text-sm text-red-700"><p>{uploadError}</p><a href="#upload-guide" onClick={() => { const guide = document.getElementById('upload-guide'); if (guide instanceof HTMLDetailsElement) guide.open = true; }} className="underline">取得ガイドを確認</a><p>下のボタンからファイルを選び直せます。</p></div>}
                     {uploadMode === 'image' ? (
                         <Button disabled={!consent} size="lg" className="w-full min-h-12 h-auto whitespace-normal text-base font-bold" onClick={() => fileInputRef.current?.click()}>
                             <Upload className="mr-2 h-5 w-5" />
@@ -190,7 +191,7 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
             <p className="mt-4 rounded-md bg-secondary/60 px-3 py-2 text-center text-sm text-muted-foreground">
                 {participantCount != null
                     ? <>従来形式の集計対象 <span className="font-bold text-foreground">{participantCount}</span> セッション</>
-                    : <>統計は未取得または少数のため非公開です。</>
+                    : <>比較データは準備中</>
                 }
             </p>
             </div>

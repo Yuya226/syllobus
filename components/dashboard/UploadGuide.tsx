@@ -5,11 +5,11 @@ export default function UploadGuide({ mode }: { mode: 'image' | 'csv' }) {
     const [device, setDevice] = useState<'pc' | 'mobile'>('mobile');
     const deviceGuide = UPLOAD_GUIDES[mode][device];
     const guide = deviceGuide ?? UPLOAD_GUIDES[mode].pc;
-    return <details id="upload-guide" className="rounded border p-3 text-sm" open>
+    return <details id="upload-guide" className="rounded border p-3 text-sm">
         <summary className="cursor-pointer font-semibold">{mode === 'image' ? 'スクリーンショット' : 'CSV'}の取得ガイド</summary>
         <label className="my-3 block">利用端末 <select className="rounded border bg-background p-2" value={device} onChange={e => setDevice(e.target.value as 'pc' | 'mobile')}><option value="mobile">スマートフォン</option><option value="pc">PC</option></select></label>
         <p className="mb-3 rounded border border-amber-300 bg-amber-50 p-3 font-medium text-amber-950">{KOAN_SCREEN_WARNING}</p>
-        {device === 'mobile' && !deviceGuide && <p className="mb-3 text-muted-foreground">以下はPC版KOANの手順です。スマートフォン専用画面の配置は未確認のため、同じ項目が見つからない場合はPCでCSVを取得し、ご自身の端末へ移して取り込んでください。</p>}
+        {device === 'mobile' && !deviceGuide && <p className="mb-3 text-muted-foreground">PC版の手順です。スマートフォンで項目が見つからない場合は、PCで取得したCSVを端末へ移してください。</p>}
         {guide ? <div className="space-y-3"><p>{guide.screenName}</p><ol className="list-decimal space-y-2 pl-5">{guide.steps.map(step => <li key={step}>{step}</li>)}</ol>
             {guide.source && <a href={guide.source.href} target="_blank" rel="noopener noreferrer" className="block underline underline-offset-2">{guide.source.label}</a>}
             {/* eslint-disable-next-line @next/next/no-img-element */}
