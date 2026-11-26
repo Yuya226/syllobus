@@ -1,45 +1,40 @@
-// Screen names and PC steps confirmed by the developer on 2026-11-18.
-// The supplied screenshots contain personal information and are not public assets.
+// PC screen names confirmed by the developer and the official KOAN manual.
+// Supplied screenshots contain personal information and are not public assets.
 export interface GuideSection {
-    screenName: string;
-    steps: string[];
+    steps: { title: string; action: string }[];
+    notes: string[];
     image?: { src: string; alt: string };
     video?: { src: string; captions: string };
     source?: { href: string; label: string };
 }
 
-export const KOAN_SCREEN_WARNING = '推奨：単位修得状況照会のCSV。大学の科目区分・単位数・修得学期をそのまま利用できます。スクリーンショットは従来の履修成績照会のみ補助対応しています。';
-const commonSteps = [
-    'KOANで「成績」を押します。「履修成績照会／範囲・出力先指示」が開きます。',
-    '「過去を含めた全成績」を選択した状態にします（初期状態で選択されています）。',
-];
-
-export const UPLOAD_GUIDES: Record<'image' | 'csv', Record<'pc' | 'mobile', GuideSection | null>> = {
-    image: {
-        pc: {
-            screenName: '履修成績照会 → スクリーンショット',
-            steps: [
-                ...commonSteps,
-                '「画面に表示する」を押して、授業ごとの成績一覧を表示します。',
-                '一覧をスクロールし、すべての授業が入るように複数枚に分けて撮影します。各授業の時間割コード・開講科目名・修得年度・評語が同じ画像内で読めるようにしてください。',
-                '氏名・学籍番号などを隠し、保存した画像をSyllobusの「成績をアップロード」でまとめて選択します（最大5枚）。5枚に収まらない場合は、全成績を含むCSVをご利用ください。',
-                '解析結果を元の成績一覧と照合し、授業の抜け・重複、評語・単位数を確認します。',
-            ],
-        },
-        mobile: null,
-    },
+export const UPLOAD_GUIDES: Record<'image' | 'csv', GuideSection> = {
     csv: {
-        pc: {
-            screenName: '単位修得状況照会 → CSV（推奨）',
-            steps: [
-                'KOANの「成績」→「単位修得状況照会」を開きます。',
-                '「過去を含めた全成績」を選び、「ファイルに出力する」を押します。続く確認画面がある場合は、画面の案内に従ってCSVを保存してください。',
-                '科目詳細区分・科目小区分・開講科目名・単位数・修得年度・修得学期・評語・合否を含む元のCSVを選びます。集計表だけのファイルは使えません。',
-                'Syllobusの「CSVでアップロード」で選択し、科目数・単位数・学期を確認します。学籍番号などは取り込みません。',
-                '従来の履修成績照会CSVも読み取れますが、分類・単位数の補完には通信が必要です。卒業要件確認には単位修得CSVをおすすめします。',
-            ],
-            source: { href: 'https://www.celas.osaka-u.ac.jp/wp-content/uploads/fresher/2026/registration-manual.pdf#page=11', label: '大阪大学公式：2026年度KOANマニュアル（11ページの画面例）' },
-        },
-        mobile: null,
+        steps: [
+            { title: 'KOANを開く', action: '成績 → 単位修得状況照会' },
+            { title: 'CSVを保存', action: '過去を含めた全成績 → ファイルに出力する' },
+            { title: 'ここに取り込む', action: 'CSVでアップロード → 成績を確認' },
+        ],
+        notes: [
+            'スマートフォンで項目が見つからない場合は、PCで保存したCSVを端末へ移してください。',
+            '確認画面が出たら、KOANの案内に従って保存してください。',
+            '科目区分・単位数・修得年度・学期を含む元のCSVを使用します。集計表だけのファイルは使えません。',
+            'Shift-JIS／UTF-8、4MBまで。取り込み後は科目数・評語・単位数・学期を確認してください。',
+            '従来の履修成績CSVも対応していますが、科目情報の補完には通信が必要です。',
+        ],
+        source: { href: 'https://www.celas.osaka-u.ac.jp/wp-content/uploads/fresher/2026/registration-manual.pdf#page=11', label: '公式マニュアルの画面例 ↗' },
+    },
+    image: {
+        steps: [
+            { title: 'KOANを開く', action: '成績 → 履修成績照会' },
+            { title: '全成績を表示', action: '過去を含めた全成績 → 画面に表示する' },
+            { title: '撮影して取り込む', action: '全授業を分けて撮影 → 画像をまとめて選択' },
+        ],
+        notes: [
+            'スマートフォン専用画面の配置は未確認です。',
+            '各授業の時間割コード・科目名・修得年度・評語が、同じ画像内で読めるように撮影してください。',
+            'PNG／JPEG／WebP、1枚4MB・最大5枚。収まらない場合はCSVをご利用ください。',
+            '解析後は授業の抜け・重複、評語・単位数を確認してください。',
+        ],
     },
 };

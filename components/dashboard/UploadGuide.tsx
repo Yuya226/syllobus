@@ -1,21 +1,25 @@
 "use client";
-import { useState } from 'react';
-import { KOAN_SCREEN_WARNING, UPLOAD_GUIDES } from '@/lib/upload-guide';
+import { UPLOAD_GUIDES } from '@/lib/upload-guide';
+
 export default function UploadGuide({ mode }: { mode: 'image' | 'csv' }) {
-    const [device, setDevice] = useState<'pc' | 'mobile'>('mobile');
-    const deviceGuide = UPLOAD_GUIDES[mode][device];
-    const guide = deviceGuide ?? UPLOAD_GUIDES[mode].pc;
+    const guide = UPLOAD_GUIDES[mode];
     return <details id="upload-guide" className="rounded border p-3 text-sm">
         <summary className="cursor-pointer font-semibold">{mode === 'image' ? 'スクリーンショット' : 'CSV'}の取得ガイド</summary>
-        <label className="my-3 block">利用端末 <select className="rounded border bg-background p-2" value={device} onChange={e => setDevice(e.target.value as 'pc' | 'mobile')}><option value="mobile">スマートフォン</option><option value="pc">PC</option></select></label>
-        <p className="mb-3 rounded border border-amber-300 bg-amber-50 p-3 font-medium text-amber-950">{KOAN_SCREEN_WARNING}</p>
-        {device === 'mobile' && !deviceGuide && <p className="mb-3 text-muted-foreground">PC版の手順です。スマートフォンで項目が見つからない場合は、PCで取得したCSVを端末へ移してください。</p>}
-        {guide ? <div className="space-y-3"><p>{guide.screenName}</p><ol className="list-decimal space-y-2 pl-5">{guide.steps.map(step => <li key={step}>{step}</li>)}</ol>
-            {guide.source && <a href={guide.source.href} target="_blank" rel="noopener noreferrer" className="block underline underline-offset-2">{guide.source.label}</a>}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            {guide.image && <img src={guide.image.src} alt={guide.image.alt} className="h-auto w-full rounded" />}
-            {guide.video && <video controls preload="none" className="w-full rounded"><source src={guide.video.src} /><track kind="captions" src={guide.video.captions} srcLang="ja" label="日本語" default /></video>}
-        </div> : <p className="leading-relaxed text-muted-foreground">この端末向けの取得手順は確認中です。サンプルデータでもお試しいただけます。</p>}
-        <p className="mt-3 text-muted-foreground">{mode === 'image' ? '氏名・学籍番号を隠し、科目名・年度・評語が読めるPNG／JPEG／WebPを選んでください（1枚4MBまで、最大5枚）。' : '単位修得CSVはShift-JIS／UTF-8に対応（4MBまで）。端末内で読み取り、任意の保存操作まで成績を送信しません。'}解析後は評語・単位数を必ず確認してください。</p>
+        <p className="mt-3 text-xs text-muted-foreground">PC版KOAN · 3ステップ</p>
+        <ol className="my-4 space-y-4">
+            {guide.steps.map((step, i) => <li key={step.title} className="flex gap-3">
+                <span aria-hidden="true" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{i + 1}</span>
+                <div className="min-w-0"><p className="font-semibold">{step.title}</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{step.action}</p></div>
+            </li>)}
+        </ol>
+        {mode === 'image' && <p className="mb-3 text-xs font-medium">氏名・学籍番号は隠してください。</p>}
+        {guide.source && <a href={guide.source.href} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline underline-offset-2">{guide.source.label}</a>}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {guide.image && <img src={guide.image.src} alt={guide.image.alt} className="mt-3 h-auto w-full rounded" />}
+        {guide.video && <video controls preload="none" className="mt-3 w-full rounded"><source src={guide.video.src} /><track kind="captions" src={guide.video.captions} srcLang="ja" label="日本語" default /></video>}
+        <details className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+            <summary className="cursor-pointer">うまくいかないとき・対応形式</summary>
+            <ul className="mt-3 list-disc space-y-2 pl-4">{guide.notes.map(note => <li key={note}>{note}</li>)}</ul>
+        </details>
     </details>;
 }
