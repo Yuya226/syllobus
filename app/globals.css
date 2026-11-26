@@ -138,3 +138,19 @@
 }
 @media (prefers-reduced-motion: reduce) { .dashboard-workspace *, .dashboard-dialog * { transition-duration: 0s !important; animation-duration: 0s !important; } }
 body:has(dialog.dashboard-dialog[open]) { overflow: hidden; }
+
+/* User-started, finite acquisition walkthrough; SVG uses confirmed labels only. */
+@keyframes guide-cursor-move {
+  0%, 10% { transform: translate(276px, 182px); }
+  50%, 100% { transform: translate(var(--cursor-x), var(--cursor-y)); }
+}
+@keyframes guide-click {
+  0%, 48%, 85%, 100% { opacity: 0; }
+  56%, 67% { opacity: .85; }
+}
+.guide-cursor { animation: guide-cursor-move 3.4s ease-in-out both; }
+.guide-click-ring { animation: guide-click 3.4s ease-in-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .guide-cursor { animation: none; transform: translate(var(--cursor-x), var(--cursor-y)); }
+  .guide-click-ring { animation: none; opacity: 0; }
+}
