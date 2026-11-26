@@ -5,6 +5,7 @@ export interface GuideSection {
     steps: string[];
     image?: { src: string; alt: string };
     video?: { src: string; captions: string };
+    source?: { href: string; label: string };
 }
 
 export const KOAN_SCREEN_WARNING = '推奨：単位修得状況照会のCSV。大学の科目区分・単位数・修得学期をそのまま利用できます。スクリーンショットは従来の履修成績照会のみ補助対応しています。';
@@ -31,11 +32,13 @@ export const UPLOAD_GUIDES: Record<'image' | 'csv', Record<'pc' | 'mobile', Guid
         pc: {
             screenName: '単位修得状況照会 → CSV（推奨）',
             steps: [
-                'KOANの成績メニューから「単位修得状況照会」を開き、CSVを出力します。出力ボタンの位置・名称は未確認のため、画面内の案内を確認してください。',
+                'KOANの「成績」→「単位修得状況照会」を開きます。',
+                '「過去を含めた全成績」を選び、「ファイルに出力する」を押します。続く確認画面がある場合は、画面の案内に従ってCSVを保存してください。',
                 '科目詳細区分・科目小区分・開講科目名・単位数・修得年度・修得学期・評語・合否を含む元のCSVを選びます。集計表だけのファイルは使えません。',
                 'Syllobusの「CSVでアップロード」で選択し、科目数・単位数・学期を確認します。学籍番号などは取り込みません。',
                 '従来の履修成績照会CSVも読み取れますが、分類・単位数の補完には通信が必要です。卒業要件確認には単位修得CSVをおすすめします。',
             ],
+            source: { href: 'https://www.celas.osaka-u.ac.jp/wp-content/uploads/fresher/2026/registration-manual.pdf#page=11', label: '大阪大学公式：2026年度KOANマニュアル（11ページの画面例）' },
         },
         mobile: null,
     },

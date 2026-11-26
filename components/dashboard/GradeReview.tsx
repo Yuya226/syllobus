@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertCircle, Trash2, ClipboardCheck, Plus } from "lucide-react";
 import type { Grade } from "@/lib/types";
 import { calculateGPA } from "@/lib/gpa";
+import { validGrades } from '@/lib/validate-grades';
 
 const GRADE_OPTIONS: Grade['grade'][] = ['S', 'A', 'B', 'C', 'F', 'P'];
 
@@ -48,7 +49,9 @@ export default function GradeReview({ initialGrades, onConfirm, onEdited }: Prop
     const earned = grades.filter(g => g.grade !== 'F' && g.grade !== null).reduce((s, g) => s + g.credits, 0);
     const hasUnknown = grades.some(g => g.grade === null);
     const hasEmptySubject = grades.some(g => !g.subject.trim());
-    const previewGpa = calculateGPA(grades).cumulative;
+    const hasInvalidCredits = grades.some(g => !Number.isFinite(g.credits) || g.credits <= 0 || g.credits > 30);
+    const canConfirm = validGrades(grades);
+    const previewGpa = hasInvalidCredits ? '—' : calculateGPA(grades).cumulative;
 
     return (
         <div className="space-y-4">
@@ -80,9 +83,10 @@ export default function GradeReview({ initialGrades, onConfirm, onEdited }: Prop
             )}
 
             {/* テーブル */}
+            {hasInvalidCredits && <p role="alert" className="rounded border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">単位数は0より大きく30以下で入力してください。空欄や範囲外のまま確定することはできません。</p>}
             <div className="rounded-lg border overflow-hidden text-sm">
                 {/* 列ヘッダー */}
-                <div className="grid grid-cols-[1fr_56px_44px_28px] gap-x-2 px-3 py-2 bg-muted/50 text-[11px] font-medium text-muted-foreground">
+                <div className="grid grid-cols-[minmax(0,1fr)_64px_58px_44px] gap-x-2 px-3 py-2 bg-muted/50 text-[11px] font-medium text-muted-foreground">
                     <span>科目名</span>
                     <span className="text-center">成績</span>
                     <span className="text-center">単位</span>
@@ -96,7 +100,7 @@ export default function GradeReview({ initialGrades, onConfirm, onEdited }: Prop
                 {grades.map((g, i) => (
                     <div
                         key={i}
-                        className={`grid grid-cols-[1fr_56px_44px_28px] gap-x-2 px-3 py-2 items-center border-t ${i % 2 === 1 ? 'bg-muted/20' : ''}`}
+                        className={`grid grid-cols-[minmax(0,1fr)_64px_58px_44px] gap-x-2 px-3 py-2 items-center border-t ${i % 2 === 1 ? 'bg-muted/20' : ''}`}
                     >
                         {/* 科目名 */}
                         <div className="min-w-0">
@@ -107,10 +111,12 @@ export default function GradeReview({ initialGrades, onConfirm, onEdited }: Prop
                                 }
                                 <input
                                     type="text"
+                                    aria-label={`${i + 1}行目の科目名`}
+                                    maxLength={200}
                                     value={g.subject}
                                     onChange={e => update(i, { subject: e.target.value })}
                                     placeholder="科目名を入力"
-                                    className={`w-full min-w-0 truncate text-xs font-medium bg-transparent border-b focus:outline-none py-0.5 ${
+                                    className={`w-full min-w-0 min-h-11 truncate text-base sm:text-sm font-medium bg-transparent border-b focus:outline-none py-0.5 ${
                                         !g.subject.trim()
                                             ? 'border-rose-400 placeholder:text-rose-400'
                                             : 'border-transparent hover:border-border focus:border-primary'
@@ -125,12 +131,13 @@ export default function GradeReview({ initialGrades, onConfirm, onEdited }: Prop
 
                         {/* 成績 */}
                         <select
+                            aria-label={`${i + 1}行目の成績`}
                             value={g.grade ?? ''}
                             onChange={e => {
                                 const v = e.target.value;
                                 update(i, { grade: v === '' ? null : v as Grade['grade'] });
                             }}
-                            className={`h-7 w-full rounded border text-center text-xs font-bold focus:outline-none focus:ring-1 ${
+                            className={`h-11 w-full rounded border text-center text-base sm:text-sm font-bold focus:outline-none focus:ring-1 ${
                                 g.grade === null
                                     ? 'border-rose-500 bg-rose-100 text-rose-700 focus:ring-rose-500'
                                     : isSpuriousP(g)
@@ -149,17 +156,19 @@ export default function GradeReview({ initialGrades, onConfirm, onEdited }: Prop
                         {/* 単位数 */}
                         <input
                             type="number"
-                            min={0.1} step="any"
-                            max={8}
-                            value={g.credits}
-                            onChange={e => update(i, { credits: Math.max(0.1, Number(e.target.value)) })}
-                            className="h-7 w-full rounded border border-input bg-background text-center text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                            aria-label={`${i + 1}行目の単位数`}
+                            min={0.01} step="any" inputMode="decimal"
+                            max={30}
+                            value={Number.isNaN(g.credits) ? '' : g.credits}
+                            onChange={e => update(i, { credits: e.target.value === '' ? NaN : Number(e.target.value) })}
+                            className="h-11 w-full rounded border border-input bg-background text-center text-base sm:text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                         />
 
                         {/* 削除 */}
                         <button
+                            aria-label={`${i + 1}行目の${g.subject || '科目'}を削除`}
                             onClick={() => remove(i)}
-                            className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            className="h-11 w-11 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                         >
                             <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -179,13 +188,13 @@ export default function GradeReview({ initialGrades, onConfirm, onEdited }: Prop
             {/* フッター */}
             <div className="flex items-center gap-3 flex-wrap">
                 <p className="text-xs text-muted-foreground">
-                    {grades.length}科目 · 修得見込み <span className="font-semibold text-foreground">{earned}</span> 単位
+                    {grades.length}科目 · 修得見込み <span className="font-semibold text-foreground">{hasInvalidCredits ? '—' : earned}</span> 単位
                     · 取込明細の参考GPA <span className="font-semibold text-foreground">{grades.some(g=>g.grade && g.grade!=='P') ? previewGpa : '対象評語なし'}</span>
                 </p>
                 <Button
                     className="ml-auto gap-2"
-                    onClick={() => onConfirm(grades)}
-                    disabled={grades.length === 0 || hasUnknown || hasEmptySubject}
+                    onClick={() => { if (canConfirm) onConfirm(grades); }}
+                    disabled={!canConfirm}
                     title={hasUnknown ? '成績未入力の科目があります' : hasEmptySubject ? '科目名が未入力の行があります' : undefined}
                 >
                     <ClipboardCheck className="h-4 w-4" />

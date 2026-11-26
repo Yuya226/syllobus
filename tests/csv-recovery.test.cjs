@@ -1,7 +1,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {parseKoanCSV}=require('../lib/csv.ts');
-const {enrichForReview,ENRICHMENT_WARNING}=require('../lib/enrich-for-review.ts');
+const {enrichForReview,ENRICHMENT_WARNING,LEGACY_REVIEW_NOTICE}=require('../lib/enrich-for-review.ts');
 const fixture=Buffer.from('header\n,,,,,999999,Synthetic CSV course,,,Teacher,2024,A');
 const grades=parseKoanCSV(fixture.buffer.slice(fixture.byteOffset,fixture.byteOffset+fixture.byteLength));
 test('CSV reading survives unavailable enrichment without dropping parsed grades',async()=>{
@@ -22,7 +22,11 @@ test('invalid enrichment response preserves the CSV; valid response keeps supple
     }
     const supplemented=grades.map(g=>({...g,credits:4,category:'選択科目'}));
     const result=await enrichForReview(grades,{fetcher:async()=>Response.json({grades:supplemented})});
-    assert.equal(result.grades[0].credits,4);assert.equal(result.warning,undefined);
+    assert.equal(result.grades[0].credits,4);assert.equal(result.warning,LEGACY_REVIEW_NOTICE);
+});
+test('an empty subject database still warns about unverified legacy CSV credits',async()=>{
+    const result=await enrichForReview(grades,{fetcher:async()=>Response.json({grades})});
+    assert.deepEqual(result.grades,grades);assert.equal(result.warning,LEGACY_REVIEW_NOTICE);
 });
 test('a failed subject query is not reported as successful CSV enrichment',async()=>{
     const {validateAndEnrichGrades}=require('../lib/subjects.ts');
