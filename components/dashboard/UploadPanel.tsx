@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import AcquisitionVideo from './AcquisitionVideo';
 import UploadGuide from "./UploadGuide";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -123,6 +124,7 @@ export default function UploadPanel({ participantCount, faculty, onFacultyChange
                         ['成績分析', 'GPAと科目別の評価'],
                     ].map(([title, description]) => <div key={title} className="rounded-md border bg-card p-4 shadow-sm"><h3 className="font-semibold text-sm">{title}</h3><p className="mt-2 text-xs leading-relaxed text-muted-foreground">{description}</p></div>)}
                 </div>
+                <AcquisitionVideo />
             </div>
 
             <input type="file" ref={fileInputRef} className="hidden" accept="image/png,image/jpeg,image/webp" multiple onChange={handleFileChange} />

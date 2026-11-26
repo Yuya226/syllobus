@@ -9,7 +9,7 @@ export default function UploadGuide({ mode }: { mode: 'image' | 'csv' }) {
     return <details id="upload-guide" className="rounded border p-3 text-sm" onToggle={event=>setOpen(event.currentTarget.open)}>
         <summary className="cursor-pointer font-semibold">{mode === 'image' ? 'スクリーンショット' : 'CSV'}の取得ガイド</summary>
         {open && !guide.video && <UploadWalkthrough key={mode} mode={mode}/>}
-        {open && guide.video && <div className="my-3 space-y-2"><p className="text-xs text-muted-foreground">実際のKOAN画面 · 約10秒・無音</p><video aria-label="単位修得CSVの取得手順" controls playsInline preload="none" poster={guide.video.poster} className="w-full rounded border" width={1120} height={400}><source src={guide.video.src} type="video/mp4"/><track kind="captions" src={guide.video.captions} srcLang="ja" label="日本語" default/>動画を再生できない場合は、下の手順をご確認ください。</video><p className="text-xs text-muted-foreground">全画面にすると操作部分を大きく見られます。</p><details className="text-xs text-muted-foreground"><summary className="cursor-pointer">文字で手順を見る</summary><ol className="mt-2 list-decimal space-y-2 pl-4"><li>成績 → 単位修得状況照会</li><li>過去を含めた全成績 → ファイルに出力する</li><li>ファイル出力開始 → CSVを保存</li><li>SyllobusでCSVを取り込み、成績を確認</li></ol></details></div>}
+        {guide.video && <ol className="my-3 list-decimal space-y-2 pl-4 text-xs text-muted-foreground"><li>成績 → 単位修得状況照会</li><li>過去を含めた全成績 → ファイルに出力する</li><li>ファイル出力開始 → CSVを保存</li><li>SyllobusでCSVを取り込み、成績を確認</li></ol>}
         {mode === 'image' && <p className="mb-3 text-xs font-medium">氏名・学籍番号は隠してください。</p>}
         {guide.source && <a href={guide.source.href} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline underline-offset-2">{guide.source.label}</a>}
         {/* eslint-disable-next-line @next/next/no-img-element */}
