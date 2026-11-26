@@ -1,12 +1,13 @@
 import type { Grade, Faculty } from './types';
+import { canonicalDepartment } from './departments';
 import { termIndex, type LearningProfile } from './learning-profile';
 export const MIN_PEERS = 20;
 export const MIN_CELL = 5;
 export interface CreditSnapshot { session_id: string; faculty: Faculty; grades: Grade[]; profile: LearningProfile }
-export interface CourseDistribution { subject: string; faculty: string; year: number; semester: string; count: number; distribution: Record<string, number> }
-export interface PaceGroup { faculty: string; yearLevel: number; year: number; semester: string; count: number; averageCredits: number }
-export interface CohortPaceGroup { faculty: string; admissionYear: number; year: number; semester: string; count: number; averageCredits: number }
-export interface TrendGroup { faculty: string; yearLevel: number; semester: string; category: string; subject: string | null; count: number; averageCredits: number }
+export interface CourseDistribution { subject: string; faculty: string; department: string; year: number; semester: string; count: number; distribution: Record<string, number> }
+export interface PaceGroup { faculty: string; department: string; yearLevel: number; year: number; semester: string; count: number; averageCredits: number }
+export interface CohortPaceGroup { faculty: string; department: string; admissionYear: number; year: number; semester: string; count: number; averageCredits: number }
+export interface TrendGroup { faculty: string; department: string; yearLevel: number; semester: string; category: string; subject: string | null; count: number; averageCredits: number }
 export interface LearningStats { courses: CourseDistribution[]; pace: PaceGroup[]; cohorts: CohortPaceGroup[]; trends: TrendGroup[] }
 export const normalizeSubject = (v: string) => v.normalize('NFKC').trim().replace(/\s+/g, ' ');
 const key = (...parts: unknown[]) => JSON.stringify(parts);
@@ -20,17 +21,19 @@ export function aggregateLearning(snapshots: CreditSnapshot[]): LearningStats {
     const seen = new Set<string>();
     for (const s of snapshots) {
         if (seen.has(s.session_id)) continue; seen.add(s.session_id);
+        const department = canonicalDepartment(s.faculty, s.profile.department);
+        if (!department) continue;
         const eligible = s.grades.filter(g => g.categorySource === 'university-csv' && g.passed === true);
         const perCourse = new Map<string, Grade[]>();
         for (const g of eligible) {
             if (!g.semester || termIndex(g.year, g.semester) === null || !g.grade || !['S','A','B','C'].includes(g.grade)) continue;
-            const k = key(s.faculty, normalizeSubject(g.subject), g.year, g.semester);
+            const k = key(s.faculty, department, normalizeSubject(g.subject), g.year, g.semester);
             perCourse.set(k, [...(perCourse.get(k) ?? []), g]);
         }
         for (const [k, gs] of perCourse) {
             if (gs.length !== 1) continue;
             const g = gs[0];
-            const group = courses.get(k) ?? { info: { faculty: s.faculty, subject: normalizeSubject(g.subject), year: g.year, semester: g.semester! }, values: new Map<string,string>() };
+            const group = courses.get(k) ?? { info: { faculty: s.faculty, department, subject: normalizeSubject(g.subject), year: g.year, semester: g.semester! }, values: new Map<string,string>() };
             group.values.set(s.session_id, g.grade!); courses.set(k, group);
         }
         const p = s.profile;
@@ -39,18 +42,18 @@ export function aggregateLearning(snapshots: CreditSnapshot[]): LearningStats {
         // Unknown semesters or records later than the attested cutoff make pace incomparable.
         if (eligible.some(g => termIndex(g.year, g.semester) === null || termIndex(g.year, g.semester)! > cutoff)) continue;
         if (p.admissionYear && p.admissionYear <= p.completedYear) {
-            const ck = key(s.faculty, p.admissionYear, p.completedYear, p.completedTerm);
-            const cohort = cohorts.get(ck) ?? { info: { faculty: s.faculty, admissionYear: p.admissionYear, year: p.completedYear, semester: p.completedTerm }, values: [] };
+            const ck = key(s.faculty, department, p.admissionYear, p.completedYear, p.completedTerm);
+            const cohort = cohorts.get(ck) ?? { info: { faculty: s.faculty, department, admissionYear: p.admissionYear, year: p.completedYear, semester: p.completedTerm }, values: [] };
             cohort.values.push(eligible.reduce((n,g)=>n+g.credits,0)); cohorts.set(ck,cohort);
         }
-        const k = key(s.faculty, p.yearLevels[p.completedYear], p.completedYear, p.completedTerm);
-        const group = pace.get(k) ?? { info: { faculty: s.faculty, yearLevel: p.yearLevels[p.completedYear], year: p.completedYear, semester: p.completedTerm }, values: [] };
+        const k = key(s.faculty, department, p.yearLevels[p.completedYear], p.completedYear, p.completedTerm);
+        const group = pace.get(k) ?? { info: { faculty: s.faculty, department, yearLevel: p.yearLevels[p.completedYear], year: p.completedYear, semester: p.completedTerm }, values: [] };
         group.values.push(eligible.reduce((n,g)=>n+g.credits,0)); pace.set(k, group);
         const personal = new Map<string, { info: Omit<TrendGroup,'count'|'averageCredits'>; credits: number }>();
         for (const g of eligible) {
             const level = p.yearLevels[g.year]; if (!level || !g.category || !g.semester) continue;
             for (const subject of [null, normalizeSubject(g.subject)]) {
-                const info = {faculty:s.faculty, yearLevel:level, semester:g.semester, category:g.category, subject};
+                const info = {faculty:s.faculty, department, yearLevel:level, semester:g.semester, category:g.category, subject};
                 const tk = key(...Object.values(info)); const t = personal.get(tk) ?? {info,credits:0};
                 t.credits += g.credits; personal.set(tk,t);
             }

@@ -20,7 +20,7 @@ import StatsPanel from "@/components/dashboard/StatsPanel";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import GraduationCheck from './GraduationCheck';
-import { FACULTY_CATALOG } from '@/lib/faculty-catalog';
+import DepartmentSelect from './DepartmentSelect';
 import { facultyTotals, compareFacultyTotals, BASIC_ENGINEERING_COURSES } from '@/lib/faculty-totals';
 
 function calcDeviation(userGpa: number, mean: number, stdDev: number): number | null {
@@ -63,7 +63,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
     const [reviewWarning, setReviewWarning] = useState('');
     const [importInfo, setImportInfo] = useState<AnalysisResult['importInfo']>();
     const [profile, setProfile] = useState<LearningProfile>(() => {
-        if (demo) return {...EMPTY_PROFILE, admissionYear:2025};
+        if (demo) return {...EMPTY_PROFILE, admissionYear:2025,department:'経済・経営学科'};
         if (typeof window === 'undefined') return EMPTY_PROFILE;
         try { const p=JSON.parse(localStorage.getItem('syllobus_learning_profile')??'null'); return validProfile(p)?p:EMPTY_PROFILE; } catch { return EMPTY_PROFILE; }
     });
@@ -201,11 +201,16 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
                         やり直す
                     </button>
                 </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                    <label className="dashboard-field">学部<select value={faculty} onChange={e=>{setFaculty(e.target.value as Faculty|'');changeProfile({...profile,department:'',complete:false});setCourse('');}}><option value="">選択してください</option>{FACULTY_OPTIONS.map(f=><option key={f}>{f}</option>)}</select></label>
+                    <DepartmentSelect faculty={faculty} value={profile.department} onChange={department=>changeProfile({...profile,department,complete:false})}/>
+                    <label className="dashboard-field">入学年度<input type="number" min={1990} max={2100} placeholder="例：2024" value={profile.admissionYear??''} onChange={e=>changeProfile({...profile,admissionYear:e.target.value?Number(e.target.value):null,complete:false})}/></label>
+                </div>
                 <label className="flex items-start gap-2 rounded border p-3 text-sm"><input type="checkbox" checked={saveConsent} onChange={e => setSaveConsent(e.target.checked)} />
                     <span>成績・区分・修得時期・学部・比較条件をサーバーに保存し、復元と統計に利用することに同意します（任意）。未選択ならブラウザ内のみ。<Link href="/about" className="underline">保存・削除の説明</Link></span>
                 </label>
                 {reviewWarning && <p role="alert" className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">{reviewWarning}</p>}
-                {pendingGrades.every(g=>g.categorySource==='university-csv') && <details className="dashboard-panel"><summary className="cursor-pointer text-sm font-medium">比較条件を設定する（任意）</summary><div className="mt-4"><LearningProfileEditor grades={pendingGrades} value={profile} onChange={changeProfile}/></div></details>}
+                {pendingGrades.every(g=>g.categorySource==='university-csv') && <details className="dashboard-panel"><summary className="cursor-pointer text-sm font-medium">比較条件を設定する（任意）</summary><div className="mt-4"><LearningProfileEditor identity={false} grades={pendingGrades} value={profile} onChange={changeProfile}/></div></details>}
                 <GradeReview initialGrades={pendingGrades} onConfirm={handleConfirm} onEdited={() => changeProfile({...profile, complete:false})} />
             </div>
         );
@@ -242,12 +247,11 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
     const hasCredit=Boolean(analysisData.importInfo||demo);
     const hasGpa=analysisData.grades.some(g=>g.grade&&['S','A','B','C','F'].includes(g.grade));
     const selection={year:profile.admissionYear?String(profile.admissionYear):'',department:profile.department,course};
-    const catalog=faculty?FACULTY_CATALOG[faculty]:undefined;
 
     return (
         <div className="dashboard-workspace space-y-6">
             <div className="flex items-start justify-between gap-3">
-                <div><p className="text-sm text-muted-foreground">{faculty||'学部未設定'}{profile.admissionYear?` · ${profile.admissionYear}年度入学`:''}</p>{demo&&<p className="mt-2 inline-flex rounded-full bg-primary/8 px-3 py-1 text-xs font-medium text-primary">サンプルデータ · 送信・保存なし</p>}</div>
+                <div><p className="text-sm text-muted-foreground">{faculty||'学部未設定'} · {profile.department||'学科未設定'}{profile.admissionYear?` · ${profile.admissionYear}年度入学`:''}</p>{demo&&<p className="mt-2 inline-flex rounded-full bg-primary/8 px-3 py-1 text-xs font-medium text-primary">サンプルデータ · 送信・保存なし</p>}</div>
                 <Button variant="outline" onClick={()=>openSettings()} className="shrink-0 gap-2 rounded-xl"><Settings2 className="h-4 w-4"/><span>設定<span className="hidden sm:inline">とデータ管理</span></span></Button>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
@@ -282,7 +286,7 @@ export default function GradeAnalysis({ stats, sessionId, onStatsUpdate, staleDa
                     <TabsList aria-label="設定項目" className="grid h-auto grid-cols-3 mb-6"><TabsTrigger value="profile" className="min-h-10">基本情報</TabsTrigger><TabsTrigger value="comparison" className="min-h-10">比較条件</TabsTrigger><TabsTrigger value="data" className="min-h-10">データ管理</TabsTrigger></TabsList>
                     <TabsContent value="profile" className="space-y-5">
                         <label className="dashboard-field">学部<select disabled={demo} value={faculty} onChange={e=>{setFaculty(e.target.value as Faculty);if(!demo)localStorage.setItem('handai_faculty',e.target.value);changeProfile({...profile,department:'',complete:false});setCourse('');}}><option value="">選択してください</option>{FACULTY_OPTIONS.map(f=><option key={f}>{f}</option>)}</select></label>
-                        <div className="grid gap-4 sm:grid-cols-2"><label className="dashboard-field">学科・専攻{catalog?<select value={profile.department} onChange={e=>{changeProfile({...profile,department:e.target.value,complete:false});setCourse('');}}><option value="">選択してください</option>{profile.department&&!(profile.department in catalog.departments)&&<option>{profile.department}</option>}{Object.keys(catalog.departments).map(d=><option key={d}>{d}</option>)}</select>:<input maxLength={100} value={profile.department} onChange={e=>changeProfile({...profile,department:e.target.value})}/>}</label><label className="dashboard-field">入学年度<input type="number" min={1990} max={2100} placeholder="例：2024" value={profile.admissionYear??''} onChange={e=>changeProfile({...profile,admissionYear:e.target.value?Number(e.target.value):null,complete:false})}/></label></div>
+                        <div className="grid gap-4 sm:grid-cols-2"><DepartmentSelect faculty={faculty} value={profile.department} onChange={department=>{changeProfile({...profile,department,complete:false});setCourse('');}}/><label className="dashboard-field">入学年度<input type="number" min={1990} max={2100} placeholder="例：2024" value={profile.admissionYear??''} onChange={e=>changeProfile({...profile,admissionYear:e.target.value?Number(e.target.value):null,complete:false})}/></label></div>
                         {faculty==='基礎工学部'&&BASIC_ENGINEERING_COURSES[profile.department]&&<label className="dashboard-field">履修コース<select value={course} onChange={e=>setCourse(e.target.value)}><option value="">選択してください</option>{Object.keys(BASIC_ENGINEERING_COURSES[profile.department]).map(c=><option key={c}>{c}</option>)}</select></label>}
                         <p className="rounded-xl bg-muted/50 p-4 text-xs leading-relaxed text-muted-foreground">比較に使う学年は「比較条件」で設定できます。</p>
                     </TabsContent>

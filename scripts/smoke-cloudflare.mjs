@@ -29,7 +29,7 @@ async function session() {
 }
 const owner=await session(), other=await session();
 const grades=[{subject:'移行検証専用の架空科目',teacher:'',credits:2,year:2025,semester:'春学期',grade:'A',category:'選択',categoryDetail:'専門教育系科目（専門教育科目）',categorySource:'university-csv',passed:true}];
-const profile={department:'',admissionYear:null,yearLevels:{},completedYear:null,completedTerm:'',complete:false};
+const profile={department:'経済・経営学科',admissionYear:2025,yearLevels:{2025:1},completedYear:2025,completedTerm:'春学期',complete:true};
 const body={session_id:owner.id,faculty:'経済学部',grades,profile,consent:true};
 const path='/api/credit-records?session_id='+owner.id;
 const headers={Origin:base,'Content-Type':'application/json',Cookie:owner.cookie};
@@ -46,7 +46,7 @@ try {
  r=await request(base+path,{headers});assert.equal(r.status,200,'restore');
  assert.equal(r.headers.get('cache-control'),'private, no-store');
  assert.deepEqual((await r.json()).snapshot.grades,grades);
- for(const endpoint of ['/api/stats','/api/learning-stats']) {
+ for(const endpoint of ['/api/stats','/api/learning-stats?scope=department']) {
   r=await request(base+endpoint);assert.equal(r.status,200,endpoint);
   const data=await r.json();if(endpoint.includes('learning'))assert.deepEqual(data,{courses:[],pace:[],cohorts:[],trends:[]},'single test session must not appear in aggregates');
  }

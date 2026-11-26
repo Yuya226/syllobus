@@ -16,7 +16,7 @@ export function useLearningStats(enabled: boolean) {
         async function load() {
             setBusy(true); setMessage('');
             try {
-                const response = await fetch('/api/learning-stats', { signal: controller.signal });
+                const response = await fetch('/api/learning-stats?scope=department', { signal: controller.signal });
                 if (!response.ok) throw new Error('Unavailable');
                 const data: LearningStats = await response.json();
                 if (active) setStats(data);

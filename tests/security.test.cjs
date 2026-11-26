@@ -196,3 +196,13 @@ test('acquisition owner can restore/delete and aggregates do not silently trunca
  global._supabaseAdmin={from:()=>({select:()=>({order:()=>({range:async()=>({data:null,error:{}})})})})};
  assert.equal((await learningStats.GET()).status,503);
 });
+
+test('department-scoped API exposes only the new aggregate contract to opted-in clients',async()=>{
+ const rows=Array.from({length:20},(_,i)=>({session_id:String(i),faculty:'経済学部',profile:{...EMPTY_PROFILE,department:'経済・経営学科'},grades:[{...DEMO_GRADES[1],grade:i<10?'A':'B'}]}));
+ global._supabaseAdmin={from:()=>({select:()=>({order:()=>({range:async()=>({data:rows,error:null})})})})};
+ const current=await learningStats.GET(new Request('https://syllobus.com/api/learning-stats?scope=department'));
+ const data=await current.json();
+ assert.equal(data.courses.length,1);assert.equal(data.courses[0].department,'経済・経営学科');
+ const legacy=await learningStats.GET(new Request('https://syllobus.com/api/learning-stats'));
+ assert.deepEqual(await legacy.json(),{courses:[],pace:[],cohorts:[],trends:[]});
+});

@@ -58,7 +58,7 @@ test('course override identity distinguishes the same name across semesters, and
 
 test('admission cohorts remain fixed, anonymous, complete and protected by sample count',()=>{
  const s=aggregateLearning(snapshots);
- assert.deepEqual(s.cohorts,[{faculty:'経済学部',admissionYear:2025,year:2025,semester:'夏学期',count:20,averageCredits:2.5}]);
+ assert.deepEqual(s.cohorts,[{faculty:'経済学部',department:'経済・経営学科',admissionYear:2025,year:2025,semester:'夏学期',count:20,averageCredits:2.5}]);
  assert.equal(aggregateLearning([...snapshots,snapshots[0]]).cohorts[0].count,20);
  for(const rows of [
   snapshots.slice(0,19),
@@ -81,4 +81,23 @@ test('comparison defaults reuse latest data without guessing year level or compl
  assert.equal(comparisonContext([{...makeGrade(),semester:null}],p).known,false);
  assert.equal(comparisonContext([...grades,{...makeGrade(),semester:null}],p).known,false);
  assert.equal(comparisonContext([],p).year,null);
+});
+
+test('department aggregates never combine different departments or unknown free-text labels',()=>{
+ const law=(department,offset=0)=>snapshots.map((s,i)=>({...s,session_id:String(i+offset),faculty:'法学部',profile:{...profile,department}}));
+ const a=law('法学科'), b=law('国際公共政策学科',100);
+ const result=aggregateLearning([...a,...b]);
+ for(const field of ['courses','pace','cohorts']) {
+  assert.equal(result[field].length,2);
+  assert.deepEqual(new Set(result[field].map(g=>g.department)),new Set(['法学科','国際公共政策学科']));
+  assert.ok(result[field].every(g=>g.count===20));
+ }
+ assert.ok(result.trends.every(g=>g.count===20));
+ const mixed=aggregateLearning([...a.slice(0,10),...b.slice(0,10)]);
+ for(const groups of Object.values(mixed)) assert.equal(groups.length,0);
+ for(const department of ['', 'PRIVATE-NAME', '経済・経営学科']) {
+  const excluded=aggregateLearning(law(department));
+  for(const groups of Object.values(excluded)) assert.equal(groups.length,0);
+  assert.ok(!JSON.stringify(excluded).includes('PRIVATE'));
+ }
 });
